@@ -28,11 +28,13 @@
 bin/
 dist/
 build/
-out/
-server
-iot-simulator
-ozik-sentinel
+/server
+/iot-simulator
+/ozik-sentinel
+!**/cmd/server/
+!**/cmd/server/**
 node_modules/
+
 
 # Next.js & Frontend builds
 .next/

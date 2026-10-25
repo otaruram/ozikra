@@ -27,11 +27,14 @@
 bin/
 dist/
 build/
-server
-ozik-sentinel-backend
-iot-simulator
-ozik-sentinel
+/server
+/ozik-sentinel-backend
+/iot-simulator
+/ozik-sentinel
+!cmd/server/
+!cmd/server/**
 node_modules/
+
 
 # Local persistent state & mock dumps
 ozik_data.json
