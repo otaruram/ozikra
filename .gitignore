@@ -75,5 +75,11 @@ yarn-error.log*
 Thumbs.db
 .idea/
 .vscode/
-.proposal/
-.Proposal_OZIK-SENTINEL_Kartika_Cyber_Hackathon_2026_v2.docx
+# Proposal & Confidential Competition Documents
+proposal/
+Proposal*
+*proposal*
+*Proposal*
+*.docx
+*.doc
+*.pptx
