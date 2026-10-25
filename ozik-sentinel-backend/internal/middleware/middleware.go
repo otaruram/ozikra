@@ -29,27 +29,19 @@ func NewMiddleware(cfg *config.Config, repo *repository.Repository) *Middleware 
 func (m *Middleware) DynamicCORS() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
-		allowedOrigin := "*"
 
 		if origin != "" {
-			for _, allowed := range m.cfg.CORSAllowedOrigins {
-				if allowed == "*" || allowed == origin {
-					allowedOrigin = origin
-					break
-				}
-				// Support wildcard *.vercel.app
-				if strings.Contains(allowed, "*.vercel.app") && strings.HasSuffix(origin, ".vercel.app") {
-					allowedOrigin = origin
-					break
-				}
-			}
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+			c.Writer.Header().Set("Vary", "Origin")
+		} else {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		}
 
-		c.Writer.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, PATCH")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Officer-Token, X-Simulated-Role, X-Officer-Email, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Officer-Token, X-Simulated-Role, X-Officer-Email, X-Requested-With, Accept, Origin")
 		c.Writer.Header().Set("Access-Control-Expose-Headers", "Content-Length, Content-Disposition")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(http.StatusNoContent)

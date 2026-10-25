@@ -23,16 +23,49 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
-	// Universal CORS Middleware for Next.js frontend (localhost:3000 / localhost:5000 / remote)
+	// Universal Dynamic CORS Middleware
 	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := c.GetHeader("Origin")
+		if origin != "" {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+			c.Writer.Header().Set("Vary", "Origin")
+		} else {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		}
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, PATCH")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Officer-Token, X-Simulated-Role, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Officer-Token, X-Simulated-Role, X-Officer-Email, X-Requested-With, Accept, Origin")
+		c.Writer.Header().Set("Access-Control-Expose-Headers", "Content-Length, Content-Disposition")
+		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
+
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(http.StatusNoContent)
 			return
 		}
 		c.Next()
+	})
+
+	r.NoRoute(func(c *gin.Context) {
+		origin := c.GetHeader("Origin")
+		if origin != "" {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+			c.Writer.Header().Set("Vary", "Origin")
+		} else {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		}
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, PATCH")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Officer-Token, X-Simulated-Role, X-Officer-Email, X-Requested-With, Accept, Origin")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+		c.JSON(http.StatusNotFound, gin.H{
+			"status":  "error",
+			"code":    404,
+			"message": fmt.Sprintf("Route %s not found on OZIK-SENTINEL backend", c.Request.URL.Path),
+		})
 	})
 
 	// ------------------------------------------------------------------------
