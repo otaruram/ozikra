@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import type { EngineConfig, Session, TacticalRole } from "@/types/sentinel";
+import { API_BASE_URL } from "@/lib/api";
 
 const SESSION_KEY = "ozikra.session";
 const ENGINE_KEY = "ozikra.engine";
@@ -191,11 +192,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setClearanceApproved(true);
 
     // Call backend to mint real military JWT immediately
-    const apiUrl =
-      process.env.NEXT_PUBLIC_API_URL ||
-      process.env.NEXT_PUBLIC_OZIKRA_API_URL ||
-      "http://localhost:8080";
-    fetch(`${apiUrl}/api/v1/auth/simulate-role`, {
+    fetch(`${API_BASE_URL}/api/v1/auth/simulate-role`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ target_role: "SUPER_ADMIN" }),
@@ -350,17 +347,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const switchSimulatedRole = useCallback(
     async (targetRole: TacticalRole): Promise<boolean> => {
       if (!session) return false;
-      const apiUrl =
-        process.env.NEXT_PUBLIC_API_URL ||
-        process.env.NEXT_PUBLIC_OZIKRA_API_URL ||
-        "http://localhost:8080";
 
       const currentToken =
         session.token ||
         (typeof window !== "undefined" ? window.localStorage.getItem("ozikra.active_token") : null);
 
       try {
-        const res = await fetch(`${apiUrl}/api/v1/auth/simulate-role`, {
+        const res = await fetch(`${API_BASE_URL}/api/v1/auth/simulate-role`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

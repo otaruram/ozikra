@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 
-const BACKEND_URL =
+const rawBackend =
   process.env.NEXT_PUBLIC_API_URL ||
   process.env.NEXT_PUBLIC_OZIKRA_API_URL ||
   process.env.BACKEND_URL ||
-  "http://localhost:8080";
+  "";
+const BACKEND_URL =
+  rawBackend && !rawBackend.includes("ozik-sentinel-backend")
+    ? rawBackend
+    : "https://ozik-sentinel.onrender.com";
 
 export async function GET() {
   try {
