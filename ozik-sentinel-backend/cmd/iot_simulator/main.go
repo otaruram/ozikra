@@ -492,7 +492,7 @@ func resetDevices() {
 func main() {
 	defaultTarget := os.Getenv("BACKEND_URL")
 	if defaultTarget == "" {
-		defaultTarget = "http://localhost:8080"
+		defaultTarget = "https://ozik-sentinel.onrender.com"
 	}
 
 	targetFlag := flag.String("target", defaultTarget, "Target OZIK-SENTINEL backend URL (e.g. http://localhost:8080 or https://ozik-sentinel.onrender.com)")
