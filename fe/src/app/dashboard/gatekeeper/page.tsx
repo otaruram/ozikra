@@ -20,7 +20,7 @@ import {
   Tag,
 } from "@/components/ui";
 import { useAction } from "@/hooks/use-async";
-import { onExportQRSeal, onUploadManifest } from "@/lib/api";
+import { onExportQRSeal, onUploadManifest, recordAuditAction } from "@/lib/api";
 import { useSession } from "@/lib/session-context";
 import { ASSET_TYPE_LABEL, type AssetType, type ManifestSubmission } from "@/types/sentinel";
 
@@ -33,6 +33,17 @@ const EMPTY_FORM: ManifestSubmission = {
   sbomFile: null,
 };
 
+const DEFAULT_BASELINE_PASSPORT = {
+  assetId: "AST-OT-728",
+  assetName: "Radar Avionik Taktis Unit-B (OT Alutsista)",
+  serialNumber: "SN-RDR-2026-X99",
+  vendor: "PT Len Industri / Thales Defence",
+  signature: "9646c4da85f251f977376861511b8cf99bcbb5e5589420b07ec874ac2f53b88",
+  issuedAt: "2026-10-25 08:31:30",
+  issuedBy: "PUSSIBERAD Tactical Gatekeeper",
+  status: "APPROVED" as const,
+};
+
 export default function GatekeeperPage() {
   const { role } = useSession();
   const canIntake = role === "LOGISTICS_OFFICER" || role === "SUPER_ADMIN";
@@ -43,17 +54,33 @@ export default function GatekeeperPage() {
   const exportSeal = useAction(onExportQRSeal);
   const result = verify.result;
 
+  const activePassport = result?.passport || DEFAULT_BASELINE_PASSPORT;
+  const isDefaultDemo = !result?.passport;
+
+  // Construct absolute scannable HTTPS verification URL for camera lenses (iOS / Android / Lens)
+  const verifyUrl = `https://ozikra.vercel.app/verify?id=${encodeURIComponent(
+    activePassport.assetId
+  )}&sig=${encodeURIComponent(
+    activePassport.signature
+  )}&ts=${encodeURIComponent(
+    activePassport.issuedAt
+  )}&vendor=${encodeURIComponent(
+    form.vendor || (isDefaultDemo ? DEFAULT_BASELINE_PASSPORT.vendor : "PT Len Industri")
+  )}&status=${encodeURIComponent(
+    (result?.verdict || "APPROVED").toLowerCase()
+  )}`;
+
   useEffect(() => {
-    if (result?.passport?.qrPayload) {
-      QRCode.toDataURL(result.passport.qrPayload, {
-        width: 300,
-        margin: 1,
-        color: { dark: "#000000", light: "#ffffff" },
-      })
-        .then((url) => setQrDataUrl(url))
-        .catch((err) => console.error("QR Code Generation failed", err));
-    }
-  }, [result?.passport?.qrPayload]);
+    // Generate high-contrast, optimal quiet-zone QR Code for instant phone camera recognition
+    QRCode.toDataURL(verifyUrl, {
+      width: 320,
+      margin: 2,
+      errorCorrectionLevel: "M",
+      color: { dark: "#000000", light: "#ffffff" },
+    })
+      .then((url) => setQrDataUrl(url))
+      .catch((err) => console.error("QR Code Generation failed", err));
+  }, [verifyUrl]);
 
   const set = <K extends keyof ManifestSubmission>(k: K, v: ManifestSubmission[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -343,53 +370,88 @@ export default function GatekeeperPage() {
             )}
           </Panel>
 
-          <Panel eyebrow="Seal" title="Tactical QR Code Passport">
+          <Panel
+            eyebrow={isDefaultDemo ? "Baseline Seal · Ready to Scan" : "Live Seal"}
+            title="Tactical QR Code Passport"
+            actions={
+              <Tag tone={isDefaultDemo ? "muted" : "default"}>
+                {isDefaultDemo ? "[BASELINE DEMO]" : "[VERIFIED PASSPORT]"}
+              </Tag>
+            }
+          >
             <div className="flex flex-col gap-5 sm:flex-row">
-              <div className="relative flex aspect-square w-full max-w-[180px] shrink-0 items-center justify-center border border-line-strong bg-ink">
-                {qrDataUrl || result?.passport?.qrImage ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={qrDataUrl || result?.passport?.qrImage || ""}
-                    alt="Tactical QR Passport"
-                    className="h-full w-full bg-paper p-3"
-                  />
-                ) : (
-                  <>
-                    <Icon.QR size={40} className="text-line-strong" />
-                    {["left-2 top-2 border-l border-t", "right-2 top-2 border-r border-t", "left-2 bottom-2 border-l border-b", "right-2 bottom-2 border-r border-b"].map((c) => (
-                      <span key={c} className={`absolute h-4 w-4 border-paper/50 ${c}`} />
-                    ))}
-                  </>
-                )}
+              <div className="flex flex-col items-center gap-2">
+                <div className="relative flex aspect-square w-full max-w-[190px] shrink-0 items-center justify-center border-2 border-line-strong bg-white p-2 shadow-inner">
+                  {qrDataUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={qrDataUrl}
+                      alt="Tactical QR Passport"
+                      className="h-full w-full object-contain"
+                    />
+                  ) : (
+                    <div className="flex h-36 w-36 items-center justify-center font-mono text-[10px] text-zinc-500">
+                      GENERATING QR...
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 font-mono text-[10px] text-emerald-400">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Kamera HP Siap Scan</span>
+                </div>
               </div>
+
               <div className="flex flex-1 flex-col gap-3">
                 <div className="flex flex-col gap-1">
                   <Eyebrow>Asset ID</Eyebrow>
-                  <Mono>{result?.passport?.assetId ?? "--"}</Mono>
+                  <Mono className="text-base font-bold text-paper">{activePassport.assetId}</Mono>
                 </div>
                 <div className="flex flex-col gap-1">
                   <Eyebrow>HMAC-SHA256 Signature</Eyebrow>
-                  <Mono className="break-all text-muted">{result?.passport?.signature ?? "Not issued"}</Mono>
+                  <Mono className="break-all text-[11px] text-muted">{activePassport.signature}</Mono>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Eyebrow>Issued</Eyebrow>
-                  <Mono className="text-muted">
-                    {result?.passport ? `${result.passport.issuedAt} · ${result.passport.issuedBy}` : "--"}
+                  <Eyebrow>Issued Authority</Eyebrow>
+                  <Mono className="text-muted text-[11px]">
+                    {activePassport.issuedAt} · {activePassport.issuedBy}
                   </Mono>
                 </div>
+
+                {/* Direct Mobile/Browser Verification Link */}
+                <div className="border border-line bg-surface-2 p-2.5 font-mono text-[11px] flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between text-muted text-[10px]">
+                    <span>TARGET VERIFIKASI SIBER:</span>
+                    <span className="text-emerald-400 font-bold">HTTPS AKTIF</span>
+                  </div>
+                  <a
+                    href={verifyUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="truncate text-accent hover:underline flex items-center gap-1 text-[11.5px]"
+                    title={verifyUrl}
+                  >
+                    <span>↗ Buka Hasil Scan di Tab Baru</span>
+                  </a>
+                  <p className="text-[10px] text-muted/80 leading-relaxed font-sans">
+                    Arahkan kamera smartphone ke kode QR di atas untuk membuka Tactical Passport Verification Gateway secara langsung.
+                  </p>
+                </div>
+
                 <Notice notice={exportSeal.notice} onClose={() => exportSeal.setNotice(null)} />
                 <Button
                   id="gatekeeper-export-qr"
                   className="mt-auto self-start"
                   size="sm"
-                  disabled={!result?.passport}
                   loading={exportSeal.isPending}
                   icon={<Icon.QR size={13} />}
                   onClick={async () => {
-                    if (result?.passport) {
-                      await exportSeal.run(result.passport.assetId);
-                      setShowPrintModal(true);
-                    }
+                    await exportSeal.run(activePassport.assetId);
+                    await recordAuditAction(
+                      "SEAL_PHYSICAL_TAG_PRINTED",
+                      activePassport.assetId,
+                      `PRINT_PREVIEW_OPENED:ASSET:${activePassport.assetId}`
+                    );
+                    setShowPrintModal(true);
                   }}
                 >
                   Print / Export Tactical QR Seal
@@ -401,7 +463,7 @@ export default function GatekeeperPage() {
       </div>
 
       {/* Military-Grade Tactical QR Passport Tag Modal */}
-      {showPrintModal && result?.passport && (
+      {showPrintModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
           <div className="relative flex w-full max-w-lg flex-col border border-paper bg-ink p-6 shadow-2xl">
             {/* Header */}
@@ -433,7 +495,7 @@ export default function GatekeeperPage() {
               </div>
 
               <div className="my-4 flex items-center gap-5">
-                <div className="flex h-36 w-36 shrink-0 items-center justify-center border-2 border-black p-1">
+                <div className="flex h-36 w-36 shrink-0 items-center justify-center border-2 border-black p-1 bg-white">
                   {qrDataUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={qrDataUrl} alt="QR Seal" className="h-full w-full object-contain" />
@@ -442,26 +504,26 @@ export default function GatekeeperPage() {
                 <div className="flex flex-col gap-1.5 text-[11px] font-mono">
                   <div>
                     <span className="font-bold text-neutral-600">ID ASET:</span>
-                    <div className="text-sm font-black">{result.passport.assetId}</div>
+                    <div className="text-sm font-black">{activePassport.assetId}</div>
                   </div>
                   <div>
                     <span className="font-bold text-neutral-600">TIPE / MODEL:</span>
-                    <div className="font-semibold">{form.assetName || "Tactical Hardware Node"}</div>
+                    <div className="font-semibold">{form.assetName || (isDefaultDemo ? DEFAULT_BASELINE_PASSPORT.assetName : "Tactical Hardware Node")}</div>
                   </div>
                   <div>
                     <span className="font-bold text-neutral-600">SERIAL NO:</span>
-                    <div>{form.serialNumber || "SN-UNKNOWN"}</div>
+                    <div>{form.serialNumber || (isDefaultDemo ? DEFAULT_BASELINE_PASSPORT.serialNumber : "SN-UNKNOWN")}</div>
                   </div>
                   <div>
                     <span className="font-bold text-neutral-600">VENDOR ASAL:</span>
-                    <div>{form.vendor || "PT Len Industri"}</div>
+                    <div>{form.vendor || (isDefaultDemo ? DEFAULT_BASELINE_PASSPORT.vendor : "PT Len Industri")}</div>
                   </div>
                 </div>
               </div>
 
               <div className="border-t border-black pt-2 text-[8px] font-mono leading-tight text-neutral-800">
-                <div className="truncate"><span className="font-bold">SEAL HASH:</span> {result.passport.qrPayload}</div>
-                <div className="truncate"><span className="font-bold">HMAC SIG:</span> {result.passport.signature}</div>
+                <div className="truncate"><span className="font-bold">VERIFY URL:</span> {verifyUrl}</div>
+                <div className="truncate"><span className="font-bold">HMAC SIG:</span> {activePassport.signature}</div>
                 <div className="mt-1 text-center font-bold tracking-widest">[ DILARANG MERUSAK / MELEPAS STIKER PENGAWASAN TAKTIS ]</div>
               </div>
             </div>
@@ -478,12 +540,17 @@ export default function GatekeeperPage() {
                   size="sm"
                   variant="outline"
                   icon={<Icon.Arrow size={14} className="rotate-90" />}
-                  onClick={() => {
-                    const urlToDownload = qrDataUrl || result?.passport?.qrImage;
-                    if (!urlToDownload || !result?.passport) return;
+                  onClick={async () => {
+                    const urlToDownload = qrDataUrl;
+                    if (!urlToDownload) return;
+                    await recordAuditAction(
+                      "QR_SEAL_IMAGE_DOWNLOADED",
+                      activePassport.assetId,
+                      `DOWNLOAD_PNG_SEAL:${activePassport.assetId}`
+                    );
                     const a = document.createElement("a");
                     a.href = urlToDownload;
-                    a.download = `TACTICAL_QR_SEAL_${result.passport.assetId}.png`;
+                    a.download = `TACTICAL_QR_SEAL_${activePassport.assetId}.png`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
@@ -496,7 +563,14 @@ export default function GatekeeperPage() {
                   size="sm"
                   variant="primary"
                   icon={<Icon.QR size={14} />}
-                  onClick={() => window.print()}
+                  onClick={async () => {
+                    await recordAuditAction(
+                      "SEAL_PHYSICAL_TAG_PRINTED",
+                      activePassport.assetId,
+                      `PHYSICAL_LABEL_PRINTED:ASSET:${activePassport.assetId}`
+                    );
+                    window.print();
+                  }}
                 >
                   Print Label Stiker
                 </Button>

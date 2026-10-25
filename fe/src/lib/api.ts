@@ -263,6 +263,38 @@ export const verifyLedgerIntegrity = () =>
     algorithm: string;
   }>("/api/v1/forensics/ledger/verify");
 
+export const recordAuditAction = async (
+  action: string,
+  assetId: string = "",
+  payload: string = "",
+  customActor?: string
+): Promise<LedgerEntry | null> => {
+  try {
+    let actor = customActor;
+    if (!actor && typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("ozikra.session");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          actor = parsed?.user?.name || parsed?.simulatedRole || "LOGISTICS_OFFICER";
+        }
+      } catch {}
+    }
+    return await request<LedgerEntry>("/api/v1/forensics/ledger/audit", {
+      method: "POST",
+      body: JSON.stringify({
+        actor: actor || "PUSSIBERAD_OPERATOR",
+        action,
+        assetId,
+        payload,
+      }),
+    });
+  } catch (err) {
+    console.warn("Audit record notice:", err);
+    return null;
+  }
+};
+
 /* ------------------------------------------------------------------ */
 /* Administration                                                      */
 /* ------------------------------------------------------------------ */

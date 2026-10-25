@@ -179,4 +179,18 @@ export const Icon = {
       <path d="m21.7 18-8.5-15a1.4 1.4 0 0 0-2.4 0l-8.5 15A1.4 1.4 0 0 0 3.5 20h17a1.4 1.4 0 0 0 1.2-2ZM12 9v4M12 17h.01" />
     </svg>
   ),
+  Clock: ({ size, ...p }: IconProps) => (
+    <svg {...base(size)} {...p}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 3" />
+    </svg>
+  ),
+  Radar: ({ size, ...p }: IconProps) => (
+    <svg {...base(size)} {...p}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" strokeDasharray="2 2" />
+      <path d="m12 12 6-6" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" />
+    </svg>
+  ),
 };

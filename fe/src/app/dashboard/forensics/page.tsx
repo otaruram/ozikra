@@ -23,6 +23,7 @@ import {
   onExportForensicReport,
   onIsolateAssetNode,
   onRunForensicAgent,
+  recordAuditAction,
 } from "@/lib/api";
 import { canKillSwitch as checkKillSwitch } from "@/lib/rbac";
 import { sanitizeMilitaryText } from "@/lib/sanitize";
@@ -100,6 +101,11 @@ export default function ForensicsPage() {
       setIsExporting(true);
       setExportNotice(null);
       await downloadForensicReportPdf(idToExport);
+      await recordAuditAction(
+        "BAP_DOSSIER_DOWNLOADED",
+        idToExport,
+        `OFFICIAL_BAP_PDF_EXPORT:ASSET:${idToExport}`
+      );
       setExportNotice({
         kind: "success",
         message: `File BAP_FORENSIK_${idToExport}_${new Date().toISOString().slice(0, 10)}.pdf berhasil diunduh ke folder Downloads Anda.`,

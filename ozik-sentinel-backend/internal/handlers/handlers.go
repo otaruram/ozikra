@@ -7,6 +7,7 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -312,14 +313,22 @@ func (h *Handlers) HandleSupplyChainVerify(c *gin.Context) {
 	// Generate HMAC-SHA256 Signed Tactical QR Code Passport
 	firmwareHash := fmt.Sprintf("%x", sha256.Sum256([]byte(serialNumber+vendor+"FW_BASELINE")))
 	rawPayload, signature := h.hmacQR.CreateTacticalQRPayload(assetID, firmwareHash, vendor, serialNumber)
-	qrBase64PNG, _ := h.hmacQR.GenerateQRCodeBase64PNG(rawPayload)
+	issuedTimestamp := time.Now().Format("2006-01-02 15:04:05")
+	verifyURL := fmt.Sprintf("https://ozikra.vercel.app/verify?id=%s&sig=%s&ts=%s&vendor=%s&status=%s",
+		url.QueryEscape(assetID),
+		url.QueryEscape(signature),
+		url.QueryEscape(issuedTimestamp),
+		url.QueryEscape(vendor),
+		url.QueryEscape(strings.ToLower(analysis.Verdict)),
+	)
+	qrBase64PNG, _ := h.hmacQR.GenerateQRCodeBase64PNG(verifyURL)
 
 	analysis.AssetID = assetID
 	analysis.Passport = models.TacticalQRPasport{
 		AssetID:      assetID,
-		QRPayload:    rawPayload,
+		QRPayload:    verifyURL,
 		Signature:    signature,
-		IssuedAt:     time.Now().Format("2006-01-02 15:04:05"),
+		IssuedAt:     issuedTimestamp,
 		IssuedBy:     "PUSSIBERAD Tactical Gatekeeper",
 		Status:       analysis.Verdict,
 		QRImage:      qrBase64PNG,
