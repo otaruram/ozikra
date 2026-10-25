@@ -1,0 +1,36 @@
+services:
+  # ----------------------------------------------------------------------------
+  # OZIK-SENTINEL Golang Backend Service
+  # Pusat Siber TNI Angkatan Darat (PUSSIBERAD) - Production Deployment
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: ozik-sentinel-backend
+    runtime: docker
+    dockerfilePath: ./ozik-sentinel-backend/Dockerfile
+    dockerContext: ./ozik-sentinel-backend
+    region: singapore
+    plan: starter
+    healthCheckPath: /healthz
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: DATABASE_URL
+        sync: false
+        # Paste your Supabase Postgres connection string (Transaction pooler or direct)
+        # e.g.: postgres://postgres.[project]:[password]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require
+      - key: SERVER_HMAC_SECRET
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://*.vercel.app,http://localhost:3000,http://localhost:5000"
+      - key: AUTH_MODE
+        value: "GOOGLE_SANDBOX"
+      - key: AI_MODE
+        value: "SUMOPOD"
+      - key: SUMOPOD_API_KEY
+        sync: false
+      - key: SUMOPOD_BASE_URL
+        value: "https://gateway.sumopod.ai/v1"
+      - key: SUMOPOD_MODEL
+        value: "gemini-2.5-flash"
+      - key: GEMINI_API_KEY
+        sync: false

@@ -1,0 +1,40 @@
+version: "3.8"
+
+services:
+  ai-engine:
+    build:
+      context: ./ozik-sentinel-backend
+      dockerfile: Dockerfile.ai
+    container_name: ozik-ai-engine
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+    restart: unless-stopped
+
+  core-backend:
+    build:
+      context: ./ozik-sentinel-backend
+      dockerfile: Dockerfile
+    container_name: ozik-core-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - AI_SERVICE_URL=http://ai-engine:8000
+    depends_on:
+      - ai-engine
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./fe
+      dockerfile: Dockerfile
+    container_name: ozik-frontend
+    ports:
+      - "5000:5000"
+    environment:
+      - NEXT_PUBLIC_OZIKRA_API_URL=http://localhost:8080
+    depends_on:
+      - core-backend
+    restart: unless-stopped

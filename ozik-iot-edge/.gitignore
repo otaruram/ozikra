@@ -1,0 +1,35 @@
+# Environment files
+.env
+.env.*
+!.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Database, Secrets & Binaries
+*.key
+*.pem
+*.cert
+*.db
+*.sqlite
+*.exe
+bin/
+dist/
+build/
+node_modules/
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+env/
+
+# Logs & Temporary Debug Files
+*.log
+task-*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
