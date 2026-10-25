@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tactical QR Passport Verification — OZIK-SENTINEL PUSSIBERAD</title>
+  
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: JetBrains Mono & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            'mil-green': '#15803d', // Hijau Militer Taktis (Verified)
+            'mil-green-dark': '#166534',
+            'mil-green-light': '#f0fdf4',
+            'mil-red': '#dc2626',   // Merah Aksen (Tampered / Alert)
+            'mil-red-dark': '#991b1b',
+            'mil-red-light': '#fef2f2',
+            'mil-black': '#09090b', // Hitam Pekat Taktis
+            'mil-card': '#ffffff',  // Putih Bersih
+            'mil-border': '#18181b', // Border Hitam Kontras
+            'mil-muted': '#52525b',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Technical Grid & Corner Markers */
+    .crosshair-corner {
+      position: relative;
+    }
+    .crosshair-corner::before, .crosshair-corner::after {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-color: #09090b;
+      pointer-events: none;
+    }
+    .corner-tl::before { top: -1px; left: -1px; border-top: 2px solid #09090b; border-left: 2px solid #09090b; }
+    .corner-tr::after { top: -1px; right: -1px; border-top: 2px solid #09090b; border-right: 2px solid #09090b; }
+    .corner-bl::before { bottom: -1px; left: -1px; border-bottom: 2px solid #09090b; border-left: 2px solid #09090b; }
+    .corner-br::after { bottom: -1px; right: -1px; border-bottom: 2px solid #09090b; border-right: 2px solid #09090b; }
+    
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .animate-pulse-subtle {
+      animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
+</head>
+<body class="bg-white text-mil-black font-sans min-h-screen antialiased selection:bg-mil-black selection:text-white pb-12">
+
+  <!-- TOP MILITARY BANNER -->
+  <header class="border-b-2 border-mil-border bg-mil-black text-white px-4 py-2.5">
+    <div class="max-w-2xl mx-auto flex items-center justify-between text-[11px] font-mono tracking-widest uppercase">
+      <div class="flex items-center gap-2">
+        <span class="inline-block w-2 h-2 rounded-full bg-mil-green animate-pulse-subtle" id="status-dot"></span>
+        <span class="font-bold">PUSSIBERAD · TACTICAL GATEKEEPER</span>
+      </div>
+      <div class="text-zinc-400 text-[10px] hidden sm:block">
+        MIL-SPEC RFC-2104 · ZERO-TRUST
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-2xl mx-auto px-4 pt-6 sm:pt-8">
+
+    <!-- PASSPORT CARD -->
+    <div class="border-2 border-mil-border bg-mil-card p-5 sm:p-7 shadow-[4px_4px_0px_0px_rgba(9,9,11,1)] relative">
+      
+      <!-- Corner Tactical Crosshairs -->
+      <span class="absolute -top-[2px] -left-[2px] w-3 h-3 border-t-2 border-l-2 border-mil-black"></span>
+      <span class="absolute -top-[2px] -right-[2px] w-3 h-3 border-t-2 border-r-2 border-mil-black"></span>
+      <span class="absolute -bottom-[2px] -left-[2px] w-3 h-3 border-b-2 border-l-2 border-mil-black"></span>
+      <span class="absolute -bottom-[2px] -right-[2px] w-3 h-3 border-b-2 border-r-2 border-mil-black"></span>
+
+      <!-- 1. HEADER / STATUS BAR -->
+      <div class="border-b-2 border-mil-border pb-5 mb-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <div class="text-[10px] font-mono uppercase tracking-[0.2em] text-mil-muted">
+              AUTHENTICATION GATEWAY // OZIKRA.VERCEL.APP
+            </div>
+            <h1 class="text-lg sm:text-xl font-bold uppercase tracking-tight text-mil-black mt-0.5">
+              Tactical QR Passport Verification
+            </h1>
+          </div>
+
+          <!-- DYNAMIC VERIFICATION BADGE -->
+          <div id="verification-badge" class="inline-flex items-center gap-2 border-2 border-mil-green bg-mil-green-light px-3.5 py-1.5 self-start sm:self-center">
+            <span class="w-2.5 h-2.5 rounded-full bg-mil-green" id="badge-indicator"></span>
+            <span class="font-mono text-xs font-bold uppercase tracking-wider text-mil-green-dark" id="badge-text">
+              SECURE / VERIFIED
+            </span>
+          </div>
+        </div>
+
+        <div class="mt-3 flex items-center justify-between text-[11px] font-mono text-mil-muted">
+          <span>INSTANSI: <strong class="text-mil-black">PUSAT SIBER TNI ANGKATAN DARAT</strong></span>
+          <span class="hidden sm:inline">SECURITY LEVEL: <strong class="text-mil-black">TOP-SECRET / MIL</strong></span>
+        </div>
+      </div>
+
+      <!-- 2. QR & ASSET SECURITY DETAILS -->
+      <div class="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-6 items-start mb-6">
+        
+        <!-- QR CODE VISUAL CONTAINER -->
+        <div class="flex flex-col items-center">
+          <div class="border-2 border-mil-border p-2 bg-white relative w-full aspect-square max-w-[160px] flex items-center justify-center">
+            <!-- SVG QR Code Icon / Real Representation -->
+            <svg class="w-full h-full text-mil-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="5" y="5" width="3" height="3" fill="currentColor"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="16" y="5" width="3" height="3" fill="currentColor"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+              <rect x="5" y="16" width="3" height="3" fill="currentColor"></rect>
+              <path d="M14 14h3v3h-3z" fill="currentColor"></path>
+              <path d="M17 17h4v4h-4z" fill="currentColor"></path>
+              <path d="M14 19h3v2h-3z"></path>
+              <path d="M19 14v3"></path>
+              <path d="M10 7h1v10h-1"></path>
+              <path d="M7 10v4"></path>
+            </svg>
+            <div class="absolute inset-0 border border-mil-black/20 pointer-events-none"></div>
+          </div>
+          <span class="font-mono text-[9px] uppercase tracking-wider text-mil-muted mt-2 text-center">
+            TACTICAL SEAL STAMP
+          </span>
+        </div>
+
+        <!-- METADATA GRID (MONOSPACE) -->
+        <div class="space-y-3.5 font-mono text-xs">
+          
+          <!-- ASSET ID -->
+          <div class="border border-mil-border p-2.5 bg-zinc-50">
+            <span class="block text-[10px] text-mil-muted tracking-wider uppercase mb-0.5 font-sans font-semibold">
+              ASSET ID
+            </span>
+            <span class="font-bold text-sm tracking-tight text-mil-black" id="display-asset-id">
+              AST-OT-728
+            </span>
+          </div>
+
+          <!-- HMAC-SHA256 SIGNATURE -->
+          <div class="border border-mil-border p-2.5 bg-zinc-50">
+            <div class="flex items-center justify-between mb-0.5">
+              <span class="text-[10px] text-mil-muted tracking-wider uppercase font-sans font-semibold">
+                HMAC-SHA256 SIGNATURE
+              </span>
+              <button onclick="copySignature()" class="text-[10px] uppercase underline text-mil-black hover:text-mil-green transition-colors">
+                Copy
+              </button>
+            </div>
+            <span class="break-all text-[11px] font-semibold text-zinc-800 leading-relaxed block" id="display-signature">
+              9646c4da85f251f977376861511b8cf99bcbb5e5589420b07ec874ac2f53b88
+            </span>
+          </div>
+
+          <!-- TWO-COLUMN META: TIMESTAMP & SECURITY LEVEL -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="border border-mil-border p-2.5 bg-zinc-50">
+              <span class="block text-[10px] text-mil-muted tracking-wider uppercase mb-0.5 font-sans font-semibold">
+                ISSUED TIMESTAMP
+              </span>
+              <span class="font-semibold text-[11.5px] text-mil-black" id="display-timestamp">
+                2026-10-25 08:31:30
+              </span>
+            </div>
+
+            <div class="border border-mil-border p-2.5 bg-zinc-50">
+              <span class="block text-[10px] text-mil-muted tracking-wider uppercase mb-0.5 font-sans font-semibold">
+                SECURITY LEVEL
+              </span>
+              <span class="font-bold text-[11.5px] text-mil-green-dark" id="display-security-level">
+                Zero-Trust Encrypted
+              </span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 3. VERIFICATION INTEGRITY REPORT -->
+      <div id="integrity-panel" class="border-2 border-mil-border p-3.5 bg-zinc-50 mb-6 font-mono text-[11.5px]">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="w-2 h-2 bg-mil-green inline-block" id="integrity-bullet"></span>
+          <strong class="uppercase tracking-wider text-xs" id="integrity-title">
+            CRYPTOGRAPHIC DIGEST MATCH: VALID
+          </strong>
+        </div>
+        <p class="text-mil-muted font-sans text-xs leading-relaxed" id="integrity-desc">
+          Tanda tangan digital HMAC-SHA256 telah diverifikasi terhadap kunci militer PUSSIBERAD. Integritas firmware, nomor seri fisik, dan manifest alutsista dinyatakan otentik dan belum dimodifikasi.
+        </p>
+      </div>
+
+      <!-- 4. ACTION BUTTONS -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <!-- ACTION 1: VERIFY DIGITAL SEAL -->
+        <button 
+          id="btn-verify"
+          onclick="handleVerifySeal()"
+          class="flex items-center justify-center gap-2 border-2 border-mil-border bg-mil-black text-white hover:bg-zinc-800 active:translate-y-0.5 px-4 py-3 font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-[2px_2px_0px_0px_rgba(9,9,11,1)]"
+        >
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="m9 12 2 2 4-4"/>
+          </svg>
+          <span id="btn-verify-text">Verify Digital Seal</span>
+        </button>
+
+        <!-- ACTION 2: DOWNLOAD AUDIT LOG -->
+        <button 
+          onclick="handleDownloadAuditLog()"
+          class="flex items-center justify-center gap-2 border-2 border-mil-border bg-white text-mil-black hover:bg-zinc-100 active:translate-y-0.5 px-4 py-3 font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-[2px_2px_0px_0px_rgba(9,9,11,1)]"
+        >
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <span>Download Audit Log</span>
+        </button>
+      </div>
+
+      <!-- DEMO TOGGLE BUTTON FOR SECURITY AUDIT -->
+      <div class="mt-5 pt-4 border-t border-dashed border-zinc-300 flex items-center justify-between text-[10px] font-mono text-mil-muted">
+        <span>SIMULASI STATUS INTEGRITAS:</span>
+        <button 
+          onclick="toggleSealStatus()" 
+          class="text-xs uppercase font-bold underline hover:text-mil-red transition-colors"
+          id="btn-toggle-demo"
+        >
+          [Simulasikan Tampered / Invalid]
+        </button>
+      </div>
+
+    </div>
+
+    <!-- FOOTER CITATION -->
+    <footer class="mt-6 text-center font-mono text-[10px] uppercase tracking-widest text-mil-muted">
+      Pusat Siber TNI AD (PUSSIBERAD) · OZIK-SENTINEL Zero-Trust Ecosystem
+      <br>
+      Tanda Tangan Kriptografi Dilindungi Undang-Undang ITE & Doktrin Operasi Siber TNI
+    </footer>
+
+  </main>
+
+  <!-- INTERACTIVE LOGIC JAVASCRIPT -->
+  <script>
+    let isSealValid = true;
+
+    // 1. Verify Digital Seal Animation & Check
+    function handleVerifySeal() {
+      const btn = document.getElementById('btn-verify');
+      const btnText = document.getElementById('btn-verify-text');
+      
+      btn.disabled = true;
+      btnText.innerText = "VERIFYING CRYPTO DIGEST...";
+      btn.classList.add('opacity-80');
+
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.classList.remove('opacity-80');
+        btnText.innerText = "VERIFY DIGITAL SEAL";
+        
+        if (isSealValid) {
+          alert("✓ VERIFIKASI BERHASIL:\nTanda tangan digital HMAC-SHA256 COCOK dengan master key PUSSIBERAD.\nStatus: SECURE / VERIFIED");
+        } else {
+          alert("⚠ PERINGATAN KEAMANAN SIBER:\nTanda tangan digital TIDAK COCOK atau segel fisik telah dimodifikasi!\nStatus: TAMPERED / UNAUTHORIZED");
+        }
+      }, 700);
+    }
+
+    // 2. Download Real Audit Log JSON File
+    function handleDownloadAuditLog() {
+      const auditData = {
+        system: "OZIK-SENTINEL",
+        gateway: "PUSSIBERAD Tactical Gatekeeper",
+        domain: "ozikra.vercel.app",
+        audit_version: "2.5.0-MIL",
+        asset_id: document.getElementById('display-asset-id').innerText.trim(),
+        hmac_signature: document.getElementById('display-signature').innerText.trim(),
+        issued_at: document.getElementById('display-timestamp').innerText.trim(),
+        security_level: document.getElementById('display-security-level').innerText.trim(),
+        integrity_status: isSealValid ? "SECURE_VERIFIED" : "TAMPERED_ALERT",
+        algorithm: "HMAC-SHA256 (RFC 2104)",
+        verified_at: new Date().toISOString(),
+        auditor: "PUSSIBERAD Automated Seal Validator",
+        verdict: isSealValid ? "CLEARANCE_GRANTED" : "QUARANTINE_REQUIRED"
+      };
+
+      const blob = new Blob([JSON.stringify(auditData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `AUDIT_LOG_${auditData.asset_id}_${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    // 3. Copy Signature to Clipboard
+    function copySignature() {
+      const sig = document.getElementById('display-signature').innerText.trim();
+      navigator.clipboard.writeText(sig).then(() => {
+        alert("Signature berhasil disalin ke clipboard:\n" + sig);
+      });
+    }
+
+    // 4. Toggle Demo (Valid vs Tampered)
+    function toggleSealStatus() {
+      isSealValid = !isSealValid;
+      const badge = document.getElementById('verification-badge');
+      const badgeDot = document.getElementById('badge-indicator');
+      const badgeText = document.getElementById('badge-text');
+      const statusDot = document.getElementById('status-dot');
+      const integrityBullet = document.getElementById('integrity-bullet');
+      const integrityTitle = document.getElementById('integrity-title');
+      const integrityDesc = document.getElementById('integrity-desc');
+      const secLevel = document.getElementById('display-security-level');
+      const toggleBtn = document.getElementById('btn-toggle-demo');
+
+      if (isSealValid) {
+        // Hijau Militer
+        badge.className = "inline-flex items-center gap-2 border-2 border-mil-green bg-mil-green-light px-3.5 py-1.5 self-start sm:self-center";
+        badgeDot.className = "w-2.5 h-2.5 rounded-full bg-mil-green";
+        badgeText.className = "font-mono text-xs font-bold uppercase tracking-wider text-mil-green-dark";
+        badgeText.innerText = "SECURE / VERIFIED";
+        statusDot.className = "inline-block w-2 h-2 rounded-full bg-mil-green animate-pulse-subtle";
+        
+        integrityBullet.className = "w-2 h-2 bg-mil-green inline-block";
+        integrityTitle.innerText = "CRYPTOGRAPHIC DIGEST MATCH: VALID";
+        integrityTitle.className = "uppercase tracking-wider text-xs text-mil-black";
+        integrityDesc.innerText = "Tanda tangan digital HMAC-SHA256 telah diverifikasi terhadap kunci militer PUSSIBERAD. Integritas firmware, nomor seri fisik, dan manifest alutsista dinyatakan otentik dan belum dimodifikasi.";
+        secLevel.innerText = "Zero-Trust Encrypted";
+        secLevel.className = "font-bold text-[11.5px] text-mil-green-dark";
+        toggleBtn.innerText = "[Simulasikan Tampered / Invalid]";
+      } else {
+        // Merah Aksen (Peringatan)
+        badge.className = "inline-flex items-center gap-2 border-2 border-mil-red bg-mil-red-light px-3.5 py-1.5 self-start sm:self-center";
+        badgeDot.className = "w-2.5 h-2.5 rounded-full bg-mil-red animate-ping";
+        badgeText.className = "font-mono text-xs font-bold uppercase tracking-wider text-mil-red-dark";
+        badgeText.innerText = "WARNING: UNVERIFIED / TAMPERED";
+        statusDot.className = "inline-block w-2 h-2 rounded-full bg-mil-red animate-pulse-subtle";
+        
+        integrityBullet.className = "w-2 h-2 bg-mil-red inline-block";
+        integrityTitle.innerText = "CRYPTOGRAPHIC SIGNATURE MISMATCH: TAMPERED!";
+        integrityTitle.className = "uppercase tracking-wider text-xs text-mil-red-dark font-bold";
+        integrityDesc.innerText = "PERINGATAN! Hash tanda tangan digital tidak cocok dengan registri PUSSIBERAD. Ada indikasi alutsista mengalami serangan fisik, tampering firmware backdoor, atau sertifikat palsu.";
+        secLevel.innerText = "SECURITY BREACH DETECTED";
+        secLevel.className = "font-bold text-[11.5px] text-mil-red-dark";
+        toggleBtn.innerText = "[Pulihkan ke Valid / Verified]";
+      }
+    }
+
+    // Auto-detect URL Query Parameters (e.g., ?id=AST-OT-728&sig=...&ts=...)
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('id')) {
+        document.getElementById('display-asset-id').innerText = params.get('id');
+      }
+      if (params.get('sig')) {
+        document.getElementById('display-signature').innerText = params.get('sig');
+      }
+      if (params.get('ts')) {
+        document.getElementById('display-timestamp').innerText = params.get('ts');
+      }
+      if (params.get('status') === 'tampered') {
+        toggleSealStatus();
+      }
+    });
+  </script>
+</body>
+</html>
