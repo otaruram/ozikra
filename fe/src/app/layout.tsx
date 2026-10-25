@@ -19,7 +19,11 @@ export const metadata: Metadata = {
   title: "OZIK-SENTINEL // Operational Zero-Trust Infrastructure & Supply-Chain Intelligence",
   description: "Pusat Siber Angkatan Darat (PUSSIBERAD) - IT/OT Supply-Chain Integrity & Lightweight SIEM",
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.png", type: "image/png" },
+      { url: "/favicon.ico" },
+    ],
     shortcut: "/favicon.png",
     apple: "/apple-touch-icon.png",
   },
