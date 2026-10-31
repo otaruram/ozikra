@@ -244,10 +244,10 @@ export default function OnboardingPage() {
       {/* Main Content: Pending Approval Card OR Registration Form */}
       <main className="relative z-10 mx-auto w-full max-w-4xl flex-1 px-4 py-7 sm:px-6 md:py-10">
         {submittedOfficer ? (
-          <div className="border border-paper/40 bg-surface/80 p-6 md:p-8 backdrop-blur shadow-2xl animate-fade-up">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="inline-flex items-center gap-1.5 border border-yellow-500/40 bg-yellow-500/10 px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-wider text-yellow-400">
-                <span className="h-2 w-2 rounded-full bg-yellow-400 animate-ping" />
+          <div className="border border-line-strong bg-surface/90 p-6 md:p-8 backdrop-blur shadow-2xl animate-fade-up">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="inline-flex items-center gap-1.5 border border-brass/55 bg-brass/12 px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-wider text-brass">
+                <span className="h-2 w-2 rounded-full bg-brass animate-ping" />
                 STATUS: PENDING SUPER ADMIN APPROVAL
               </span>
               <span className="font-mono text-xs text-muted">ID: {submittedOfficer.id}</span>
@@ -344,9 +344,9 @@ export default function OnboardingPage() {
                     }, 600);
                   }
                 }}
-                className="border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 text-[11px]"
+                className="border-accent/55 bg-accent/10 text-accent hover:bg-accent hover:text-accent-ink text-[11px]"
               >
-                ⚡ Auto-Approve (Simulasi Super Admin)
+                ★ Auto-Approve (Simulasi Super Admin)
               </Button>
             </div>
           </div>
@@ -366,7 +366,7 @@ export default function OnboardingPage() {
             </div>
 
             {errorMsg && (
-              <div className="mb-6 flex items-center gap-3 border border-red-500/40 bg-red-500/10 p-3.5 font-mono text-xs text-red-400">
+              <div className="mb-6 flex items-center gap-3 border border-crimson/55 bg-crimson/10 p-3.5 font-mono text-xs text-crimson">
                 <Icon.Bolt size={16} />
                 <span>{errorMsg}</span>
               </div>
@@ -393,8 +393,8 @@ export default function OnboardingPage() {
                       <div className="font-mono text-[11px] text-muted">Google OAuth SSO Provider Token Valid</div>
                     </div>
                   </div>
-                  <span className="inline-flex items-center gap-1.5 border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 font-mono text-[10px] font-semibold tracking-wider text-emerald-500">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  <span className="inline-flex items-center gap-1.5 border border-accent/55 bg-accent/10 px-2.5 py-1 font-mono text-[10px] font-semibold tracking-wider text-accent">
+                    <span className="h-1.5 w-1.5 rounded-full bg-accent" />
                     GOOGLE VERIFIED
                   </span>
                 </div>

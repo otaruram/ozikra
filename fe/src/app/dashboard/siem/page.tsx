@@ -283,16 +283,16 @@ export default function SiemPage() {
         title="Live SIEM & QR Check-In"
         description="Any firmware or configuration change without a matching physical QR maintenance window is flagged as unverified tampering."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={handleAutoFillSiem}
               icon={<Icon.Refresh size={12} />}
-              className="border-paper/40 text-paper text-[11px] hover:bg-paper hover:text-ink cursor-pointer"
+              className="border-accent/50 bg-accent/10 text-accent text-[11px] hover:bg-accent hover:text-accent-ink cursor-pointer"
             >
-              ⚡ Auto-Fill QR Check-In
+              ★ Auto-Fill QR Check-In
             </Button>
             <Tag tone="muted">Active Monitoring</Tag>
           </div>
@@ -311,9 +311,9 @@ export default function SiemPage() {
               size="sm"
               onClick={handleAutoFillSiem}
               icon={<Icon.Refresh size={12} />}
-              className="border-paper/40 text-paper text-[11px] hover:bg-paper hover:text-ink cursor-pointer"
+              className="border-accent/50 bg-accent/10 text-accent text-[11px] hover:bg-accent hover:text-accent-ink cursor-pointer"
             >
-              ⚡ Auto-Fill
+              ★ Auto-Fill
             </Button>
           }
         >
@@ -436,8 +436,8 @@ export default function SiemPage() {
                     <Icon.Refresh size={10} className="animate-spin" /> Fetching...
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live Stream
+                  <span className="flex items-center gap-1 text-accent font-medium">
+                    <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" /> Live Stream
                   </span>
                 )}
               </span>
@@ -452,7 +452,7 @@ export default function SiemPage() {
             isLoading={isFetchingTelemetry && telemetryState.data.length === 0}
             emptyTitle="No correlated events"
             emptyMessage={debouncedSearch ? "No events matching your search filter." : "No telemetry logs ingested yet. Awaiting backend stream..."}
-            rowClassName={(c) => (c.verdict === "ANOMALY" ? "bg-red-950/15" : undefined)}
+            rowClassName={(c) => (c.verdict === "ANOMALY" ? "bg-crimson/10" : undefined)}
           />
           <Pagination
             idPrefix="siem-table"

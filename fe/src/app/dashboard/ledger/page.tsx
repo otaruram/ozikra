@@ -321,26 +321,26 @@ export default function LedgerPage() {
       {/* Cryptographic Hash-Chain Verification Banner */}
       {verifyResult && (
         <div
-          className={`border p-4 font-mono text-xs flex items-center justify-between ${
+          className={`border p-4 font-mono text-xs flex flex-wrap items-center justify-between gap-3 ${
             verifyResult.valid
-              ? "border-emerald-500/50 bg-emerald-950/20 text-emerald-200"
-              : "border-red-500/50 bg-red-950/20 text-red-200"
+              ? "border-accent/60 bg-accent/10 text-paper"
+              : "border-crimson/65 bg-crimson/10 text-paper"
           }`}
         >
           <div className="flex items-center gap-3">
-            <span className={`h-2.5 w-2.5 rounded-full ${verifyResult.valid ? "bg-emerald-400" : "bg-red-400 animate-ping"}`} />
+            <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${verifyResult.valid ? "bg-accent" : "bg-crimson animate-ping"}`} />
             <div>
-              <div className="font-bold">
+              <div className={`font-bold ${verifyResult.valid ? "text-accent" : "text-crimson"}`}>
                 {verifyResult.valid ? "CRYPTOGRAPHIC HASH-CHAIN INTEGRITY VERIFIED (OK)" : "CHAIN INTEGRITY COMPROMISED"}
               </div>
-              <div className="text-[11px] opacity-80 mt-0.5">
+              <div className="text-[11px] text-muted mt-0.5">
                 Status: {verifyResult.status} · Blok Terverifikasi: {verifyResult.total_blocks} · Blok Cacat: {verifyResult.tampered_blocks} · Algoritma: {verifyResult.algorithm}
               </div>
             </div>
           </div>
           <button
             onClick={() => setVerifyResult(null)}
-            className="text-[11px] opacity-70 hover:opacity-100 uppercase"
+            className="cursor-pointer text-[11px] text-muted hover:text-paper uppercase"
           >
             [Tutup]
           </button>
@@ -356,22 +356,22 @@ export default function LedgerPage() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="border border-line bg-surface p-4 flex flex-col gap-1">
               <Eyebrow>Buku Induk Logistik</Eyebrow>
-              <span className="font-mono text-3xl font-bold text-paper">{rows?.length ?? 0}</span>
+              <span className="font-display text-3xl font-medium tabular-nums text-paper">{rows?.length ?? 0}</span>
               <span className="text-[11px] text-muted font-mono">Total Transaksi Penerimaan</span>
             </div>
             <div className="border border-line bg-surface p-4 flex flex-col gap-1">
               <Eyebrow>Paspor Segel Fisik</Eyebrow>
-              <span className="font-mono text-3xl font-bold text-emerald-400">
+              <span className="font-display text-3xl font-medium tabular-nums text-accent">
                 {rows?.filter((r) => r.action.includes("SEAL") || r.action.includes("GATEKEEPER")).length ?? 0}
               </span>
-              <span className="text-[11px] text-emerald-400/80 font-mono">Stiker QR Mil-Spec Aktif</span>
+              <span className="text-[11px] text-accent font-mono">Stiker QR Mil-Spec Aktif</span>
             </div>
             <div className="border border-line bg-surface p-4 flex flex-col gap-1">
               <Eyebrow>Karantina Pengadaan</Eyebrow>
-              <span className="font-mono text-3xl font-bold text-amber-400">
+              <span className="font-display text-3xl font-medium tabular-nums text-brass">
                 {rows?.filter((r) => r.action.includes("QUARANTINE")).length ?? 0}
               </span>
-              <span className="text-[11px] text-amber-400/80 font-mono">Anomali Manifest / CVE</span>
+              <span className="text-[11px] text-brass font-mono">Anomali Manifest / CVE</span>
             </div>
             <div className="border border-line bg-surface p-4 flex flex-col gap-1">
               <Eyebrow>Standar Segel Fisik</Eyebrow>
@@ -437,10 +437,10 @@ export default function LedgerPage() {
                 return (
                   <div
                     key={item.hash}
-                    className="border border-line bg-surface-2 p-4 transition-all hover:border-paper/80 flex flex-col gap-3"
+                    className="border border-line bg-surface-2 p-4 transition-colors hover:border-line-strong flex flex-col gap-3"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-2.5">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="font-mono text-xs font-black text-paper">
                           BAP-LOG-2026-#00{String(item.index).padStart(4, "0")}
                         </span>
@@ -473,8 +473,8 @@ export default function LedgerPage() {
                       </div>
                       <div>
                         <span className="text-[10px] font-mono uppercase text-muted">Kode Segel SHA-256:</span>
-                        <Mono className="text-[11px] break-all text-muted/90">{short(item.hash)}</Mono>
-                        <div className="text-[10px] font-mono text-emerald-400 mt-0.5">✓ Polyimide Mil-Spec Label OK</div>
+                        <Mono className="text-[11px] break-all text-muted">{short(item.hash)}</Mono>
+                        <div className="text-[10.5px] font-mono font-medium text-accent mt-0.5">✓ Polyimide Mil-Spec Label OK</div>
                       </div>
                     </div>
 
@@ -487,7 +487,7 @@ export default function LedgerPage() {
                           href={verifyUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 border border-emerald-500/50 bg-emerald-950/20 px-2.5 py-1 font-mono text-[11px] text-emerald-300 hover:bg-emerald-900/30"
+                          className="inline-flex items-center gap-1.5 border border-accent/55 bg-accent/10 px-2.5 py-1 font-mono text-[11px] font-medium text-accent transition-colors hover:bg-accent hover:text-accent-ink"
                         >
                           <Icon.QR size={12} />
                           <span>↗ Buka Hasil Scan QR</span>
@@ -527,25 +527,25 @@ export default function LedgerPage() {
         <div className="flex flex-col gap-4">
           {/* Commander C2 Situation Banner */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="border border-red-500/50 bg-red-500/10 p-4 flex flex-col gap-1">
+            <div className="border border-crimson/65 bg-crimson/10 p-4 flex flex-col gap-1">
               <Eyebrow>Postur Pertahanan Siber</Eyebrow>
               <div className="flex items-center gap-2 mt-1">
-                <span className="h-3 w-3 rounded-full bg-red-500 animate-ping" />
-                <span className="font-mono text-2xl font-black text-red-500">DEFCON 2</span>
+                <span className="h-2.5 w-2.5 rounded-full bg-crimson animate-ping" />
+                <span className="font-display text-2xl font-semibold text-crimson">DEFCON 2</span>
               </div>
-              <span className="text-[11px] text-red-500 font-semibold font-mono">Elevated Readiness Alert</span>
+              <span className="text-[11px] text-crimson font-semibold font-mono">Elevated Readiness Alert</span>
             </div>
             <div className="border border-line bg-surface p-4 flex flex-col gap-1">
               <Eyebrow>Surat Perintah (SPRIN)</Eyebrow>
-              <span className="font-mono text-3xl font-bold text-paper">{rows?.length ?? 0}</span>
+              <span className="font-display text-3xl font-medium tabular-nums text-paper">{rows?.length ?? 0}</span>
               <span className="text-[11px] text-muted font-mono">Direktif Komando Dikeluarkan</span>
             </div>
             <div className="border border-line bg-surface p-4 flex flex-col gap-1">
               <Eyebrow>Isolasi Nodal Air-Gap</Eyebrow>
-              <span className="font-mono text-3xl font-bold text-amber-500">
+              <span className="font-display text-3xl font-medium tabular-nums text-brass">
                 {rows?.filter((r) => r.action.includes("KILL_SWITCH") || r.action.includes("ISOLAT")).length ?? 0}
               </span>
-              <span className="text-[11px] text-amber-500 font-mono">Node Diputus Relai Fisik</span>
+              <span className="text-[11px] text-brass font-mono">Node Diputus Relai Fisik</span>
             </div>
             <div className="border border-line bg-surface p-4 flex flex-col gap-1">
               <Eyebrow>Otoritas Komando C2</Eyebrow>
@@ -608,20 +608,20 @@ export default function LedgerPage() {
                 return (
                   <div
                     key={item.hash}
-                    className={`border p-4 transition-all flex flex-col gap-3 ${
+                    className={`border p-4 transition-colors flex flex-col gap-3 ${
                       isKillSwitch
-                        ? "border-red-500/60 bg-red-950/15"
+                        ? "border-crimson/60 bg-crimson/10"
                         : isRoleSwitch
-                        ? "border-amber-500/50 bg-amber-950/15"
+                        ? "border-brass/55 bg-brass/10"
                         : "border-line bg-surface-2"
                     }`}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-2.5">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="font-mono text-xs font-black tracking-wider text-paper">
                           SPRIN-OPS/PUSSIBERAD/DIR-#00{String(item.index).padStart(4, "0")}
                         </span>
-                        <Tag tone={isKillSwitch ? "alert" : isRoleSwitch ? "inverted" : "default"}>
+                        <Tag tone={isKillSwitch ? "alert" : isRoleSwitch ? "brass" : "default"}>
                           {isKillSwitch
                             ? "PERINTAH: ISOLASI AIR-GAP / RELAY CUT"
                             : isRoleSwitch
@@ -644,7 +644,7 @@ export default function LedgerPage() {
                       <div>
                         <span className="text-[10px] font-mono uppercase text-muted">Otoritas Komandan:</span>
                         <div className="font-mono text-sm font-medium text-paper">{item.actor}</div>
-                        <span className="text-[11px] text-emerald-400 font-mono">✓ Otorisasi Sah PUSSIBERAD</span>
+                        <span className="text-[11px] text-accent font-medium font-mono">✓ Otorisasi Sah PUSSIBERAD</span>
                       </div>
                       <div>
                         <span className="text-[10px] font-mono uppercase text-muted">Cap Digital Kriptografis:</span>
@@ -702,23 +702,23 @@ export default function LedgerPage() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="border border-line bg-surface p-4 flex flex-col gap-1">
               <Eyebrow>Berkas Perkara BAP</Eyebrow>
-              <span className="font-mono text-3xl font-bold text-paper">{rows?.length ?? 0}</span>
+              <span className="font-display text-3xl font-medium tabular-nums text-paper">{rows?.length ?? 0}</span>
               <span className="text-[11px] text-muted font-mono">Dossier Kasus Digital Terbit</span>
             </div>
-            <div className="border border-emerald-500/40 bg-emerald-500/10 p-4 flex flex-col gap-1">
+            <div className="border border-accent/55 bg-accent/10 p-4 flex flex-col gap-1">
               <Eyebrow>Chain of Custody</Eyebrow>
               <div className="flex items-center gap-2 mt-1">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                <span className="font-mono text-2xl font-bold text-emerald-500">100% UTUH</span>
+                <span className="h-2.5 w-2.5 rounded-full bg-accent" />
+                <span className="font-display text-2xl font-semibold text-accent">100% UTUH</span>
               </div>
-              <span className="text-[11px] text-emerald-500 font-semibold font-mono">Rantai Bukti Tidak Terputus</span>
+              <span className="text-[11px] text-accent font-semibold font-mono">Rantai Bukti Tidak Terputus</span>
             </div>
             <div className="border border-line bg-surface p-4 flex flex-col gap-1">
               <Eyebrow>Bukti Model AI Terkunci</Eyebrow>
-              <span className="font-mono text-3xl font-bold text-purple-400">
+              <span className="font-display text-3xl font-medium tabular-nums text-brass">
                 {rows?.filter((r) => r.action.includes("FORENSIC")).length ?? 0}
               </span>
-              <span className="text-[11px] text-purple-400/80 font-mono">Neural Weights Audited</span>
+              <span className="text-[11px] text-brass font-mono">Neural Weights Audited</span>
             </div>
             <div className="border border-line bg-surface p-4 flex flex-col gap-1">
               <Eyebrow>Standar Yudisial Militer</Eyebrow>
@@ -774,17 +774,17 @@ export default function LedgerPage() {
                 return (
                   <div
                     key={item.hash}
-                    className="border border-line bg-surface-2 p-4 transition-all hover:border-paper/80 flex flex-col gap-3"
+                    className="border border-line bg-surface-2 p-4 transition-colors hover:border-line-strong flex flex-col gap-3"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-2.5">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="font-mono text-xs font-black text-paper">
                           BAP-SIBER/2026/KASUS-#00{String(item.index).padStart(4, "0")}
                         </span>
                         <Tag tone={isForensic ? "default" : "muted"}>
                           {isForensic ? "UJI FORENSIK MODEL AI" : "BUKTI PENGAWASAN NODAL"}
                         </Tag>
-                        <span className="border border-emerald-500/40 bg-emerald-950/20 px-2 py-0.5 font-mono text-[10px] text-emerald-300">
+                        <span className="border border-accent/55 bg-accent/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-accent">
                           RANTAI BUKTI: UTUH &amp; SAH
                         </span>
                       </div>
@@ -810,7 +810,7 @@ export default function LedgerPage() {
                       <div>
                         <span className="text-[10px] font-mono uppercase text-muted">Hash SHA-256 Barang Bukti:</span>
                         <Mono className="text-[11px] break-all text-paper">{short(item.hash)}</Mono>
-                        <div className="text-[10px] font-mono text-emerald-400 mt-0.5">Integritas Matematis Valid</div>
+                        <div className="text-[10.5px] font-mono font-medium text-accent mt-0.5">✓ Integritas Matematis Valid</div>
                       </div>
                     </div>
 

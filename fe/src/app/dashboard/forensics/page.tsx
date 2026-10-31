@@ -316,13 +316,13 @@ export default function ForensicsPage() {
                 <Notice notice={isolate.notice} onClose={() => isolate.setNotice(null)} />
               </>
             ) : (
-              <div className="border border-red-500/40 bg-red-950/20 p-3.5 flex flex-col gap-1.5">
-                <div className="flex items-center gap-2 text-red-400 font-mono text-xs font-bold uppercase tracking-wider">
+              <div className="border border-crimson/55 bg-crimson/10 p-3.5 flex flex-col gap-1.5">
+                <div className="flex items-center gap-2 text-crimson font-mono text-xs font-bold uppercase tracking-wider">
                   <Icon.ShieldAlert size={14} />
                   <span>Otorisasi Komando Diperlukan.</span>
                 </div>
                 <p className="font-mono text-[11px] text-muted leading-relaxed">
-                  Eksekusi Kill-Switch isolasi fisik node hanya dapat disahkan oleh <span className="text-paper font-semibold">Komandan (COMMANDER)</span> atau <span className="text-accent font-semibold">SUPER_ADMIN</span>. Peran aktif Anda: <span className="text-amber-400 font-bold">[{role || "AUDITOR"}]</span>.
+                  Eksekusi Kill-Switch isolasi fisik node hanya dapat disahkan oleh <span className="text-paper font-semibold">Komandan (COMMANDER)</span> atau <span className="text-accent font-semibold">SUPER_ADMIN</span>. Peran aktif Anda: <span className="text-brass font-bold">[{role || "AUDITOR"}]</span>.
                 </p>
               </div>
             )}

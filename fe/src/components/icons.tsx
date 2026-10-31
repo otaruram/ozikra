@@ -155,6 +155,11 @@ export const Icon = {
       <path d="M3 6h18M3 12h18M3 18h18" />
     </svg>
   ),
+  Close: ({ size, ...p }: IconProps) => (
+    <svg {...base(size)} {...p}>
+      <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
+  ),
   Google: ({ size = 16, ...p }: IconProps) => (
     <svg width={size} height={size} viewBox="0 0 24 24" {...p}>
       <path

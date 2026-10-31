@@ -114,7 +114,7 @@ export default function GatekeeperPage() {
         title="Supply-Chain Gatekeeper"
         description="Pre-deployment multimodal audit of procurement manifests and SBOMs. Approved assets receive an HMAC-signed Tactical QR Passport."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {canIntake ? (
               <Button
                 type="button"
@@ -122,12 +122,12 @@ export default function GatekeeperPage() {
                 size="sm"
                 onClick={handleAutoFillGatekeeper}
                 icon={<Icon.Refresh size={12} />}
-                className="border-paper/40 text-paper text-[11px] hover:bg-paper hover:text-ink"
+                className="border-accent/50 bg-accent/10 text-accent text-[11px] hover:bg-accent hover:text-accent-ink"
               >
-                ⚡ Auto-Fill Manifest &amp; SBOM
+                ★ Auto-Fill Manifest &amp; SBOM
               </Button>
             ) : (
-              <div className="flex items-center gap-1.5 border border-amber-500/40 bg-amber-950/20 px-3 py-1 font-mono text-[11px] text-amber-300">
+              <div className="flex items-center gap-1.5 border border-brass/55 bg-brass/12 px-3 py-1 font-mono text-[11px] font-medium text-brass">
                 <Icon.ShieldAlert size={12} />
                 <span>Otorisasi Terbatas: {role || "GUEST"}</span>
               </div>
@@ -150,40 +150,44 @@ export default function GatekeeperPage() {
                 size="sm"
                 onClick={handleAutoFillGatekeeper}
                 icon={<Icon.Refresh size={12} />}
-                className="border-paper/40 text-paper text-[11px] hover:bg-paper hover:text-ink"
+                className="border-accent/50 bg-accent/10 text-accent text-[11px] hover:bg-accent hover:text-accent-ink"
               >
-                ⚡ Auto-Fill
+                ★ Auto-Fill
               </Button>
             ) : null
           }
         >
           {!canIntake ? (
-            <div className="flex flex-col items-center justify-center p-8 border border-dashed border-red-500/40 bg-red-950/20 text-center gap-4">
-              <div className="w-12 h-12 rounded-full border border-red-500/40 bg-red-500/10 flex items-center justify-center text-red-400">
+            <div className="flex flex-col items-center justify-center p-6 sm:p-8 border border-dashed border-crimson/55 bg-crimson/10 text-center gap-4">
+              <div className="w-12 h-12 rounded-full border border-crimson/55 bg-crimson/12 flex items-center justify-center text-crimson">
                 <Icon.ShieldAlert size={24} />
               </div>
               <div className="flex flex-col gap-2 max-w-md">
-                <h3 className="font-mono text-sm uppercase tracking-wider text-red-400 font-bold">
+                <h3 className="font-mono text-sm uppercase tracking-wider text-crimson font-bold">
                   Akses Ditolak: Fitur ini memerlukan otorisasi Perwira Logistik.
                 </h3>
                 <p className="text-xs text-muted font-mono leading-relaxed">
                   Peran aktif sesi militer Anda saat ini adalah <span className="text-paper font-bold">[{role || "UNKNOWN"}]</span>.
-                  Modul verifikasi pre-deployment Gatekeeper (Upload Manifest &amp; SBOM, Analisis Kerentanan CVE &amp; Penerbitan QR Passport) dibatasi secara ketat hanya untuk <span className="text-emerald-400 font-semibold">LOGISTICS_OFFICER</span> atau <span className="text-accent font-semibold">SUPER_ADMIN</span>.
+                  Modul verifikasi pre-deployment Gatekeeper (Upload Manifest &amp; SBOM, Analisis Kerentanan CVE &amp; Penerbitan QR Passport) dibatasi secara ketat hanya untuk <span className="text-accent font-semibold">LOGISTICS_OFFICER</span> atau <span className="text-brass font-semibold">SUPER_ADMIN</span>.
                 </p>
               </div>
-              <div className="mt-2 text-[11px] font-mono text-muted/90 bg-surface-2 px-3 py-2 border border-line flex items-center gap-2">
-                <span>💡</span>
+              <div className="mt-2 text-[11px] font-mono text-paper bg-surface-2 px-3 py-2 border border-line flex items-center gap-2 text-left">
+                <span className="text-brass">★</span>
                 <span>
-                  Gunakan dropdown <strong>Switch Role Simulator</strong> di header kanan atas untuk beralih ke <strong>Perwira Logistik (LOGISTICS_OFFICER)</strong>.
+                  Gunakan menu <strong>Peran</strong> di header kanan atas untuk beralih ke <strong>Perwira Logistik (LOGISTICS_OFFICER)</strong>.
                 </span>
               </div>
             </div>
           ) : (
             <form onSubmit={submit} className="flex flex-col gap-5">
               {activeFormatNote && (
-                <div className="flex items-center justify-between border border-emerald-500/30 bg-emerald-950/20 px-3 py-2 font-mono text-[11px] text-emerald-300">
-                  <span>PRESET AKTIF: {activeFormatNote}</span>
-                  <span className="text-[10px] text-emerald-400/80">Klik Auto-Fill lagi untuk ganti format</span>
+                <div className="flex flex-col gap-1 border border-accent/55 bg-accent/10 px-3.5 py-2.5 font-mono text-[11px] sm:flex-row sm:items-center sm:justify-between">
+                  <span className="font-semibold text-paper">
+                    <span className="text-accent">★ PRESET AKTIF:</span> {activeFormatNote}
+                  </span>
+                  <span className="text-[10.5px] text-muted">
+                    Klik Auto-Fill lagi untuk ganti format
+                  </span>
                 </div>
               )}
               <Dropzone
@@ -367,13 +371,13 @@ export default function GatekeeperPage() {
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-1.5 font-mono text-[10px] text-emerald-400">
-                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <div className="flex items-center gap-1.5 font-mono text-[10.5px] font-semibold text-accent">
+                    <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
                     <span>Kamera HP Siap Scan</span>
                   </div>
                 </div>
 
-                <div className="flex flex-1 flex-col gap-3">
+                <div className="flex min-w-0 flex-1 flex-col gap-3">
                   <div className="flex flex-col gap-1">
                     <Eyebrow>Asset ID</Eyebrow>
                     <Mono className="text-base font-bold text-paper">{activePassport.assetId}</Mono>
@@ -391,9 +395,9 @@ export default function GatekeeperPage() {
 
                   {/* Direct Mobile/Browser Verification Link */}
                   <div className="border border-line bg-surface-2 p-2.5 font-mono text-[11px] flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between text-muted text-[10px]">
+                    <div className="flex flex-wrap items-center justify-between gap-1 text-muted text-[10px]">
                       <span>TARGET VERIFIKASI SIBER:</span>
-                      <span className="text-emerald-400 font-bold">HTTPS AKTIF (oziksentinel.biz.id)</span>
+                      <span className="text-accent font-bold">HTTPS AKTIF (oziksentinel.biz.id)</span>
                     </div>
                     <a
                       href={verifyUrl}

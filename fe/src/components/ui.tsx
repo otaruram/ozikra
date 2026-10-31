@@ -694,17 +694,17 @@ export function Segmented<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="inline-flex max-w-full flex-wrap border border-line-strong bg-ink p-0.5">
+    <div className="flex w-full flex-wrap gap-0.5 border border-line-strong bg-ink p-0.5 sm:inline-flex sm:w-auto">
       {options.map((o) => (
         <button
           key={o.value}
           type="button"
           onClick={() => onChange(o.value)}
           className={cn(
-            "cursor-pointer px-2.5 py-1.5 font-mono text-[11px] transition-colors sm:px-3",
+            "flex-1 cursor-pointer whitespace-nowrap px-2.5 py-1.5 text-center font-mono text-[11px] transition-colors sm:flex-none sm:px-3",
             value === o.value
               ? "bg-accent text-accent-ink font-semibold"
-              : "text-muted hover:text-paper",
+              : "text-muted hover:bg-surface-2 hover:text-paper",
           )}
         >
           {o.label}
