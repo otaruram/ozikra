@@ -12,12 +12,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"ozik-sentinel-backend/internal/config"
 	"ozik-sentinel-backend/internal/middleware"
 	"ozik-sentinel-backend/internal/models"
 	"ozik-sentinel-backend/internal/repository"
 	"ozik-sentinel-backend/internal/services"
+
+	"github.com/gin-gonic/gin"
 )
 
 type Handlers struct {
@@ -159,10 +160,10 @@ func (h *Handlers) RegisterRoutes(r *gin.Engine, mw *middleware.Middleware) {
 
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{
-			"error":     "ENDPOINT_NOT_FOUND",
-			"message":   fmt.Sprintf("Route %s %s not found on OZIK Sentinel Backend", c.Request.Method, c.Request.URL.Path),
-			"healthz":   "/healthz",
-			"api_v1":    "/api/v1/health",
+			"error":   "ENDPOINT_NOT_FOUND",
+			"message": fmt.Sprintf("Route %s %s not found on OZIK Sentinel Backend", c.Request.Method, c.Request.URL.Path),
+			"healthz": "/healthz",
+			"api_v1":  "/api/v1/health",
 		})
 	})
 }
@@ -1226,10 +1227,13 @@ func (h *Handlers) HandleRegisterOfficer(c *gin.Context) {
 		return
 	}
 
+	if body.Role == "" {
+		body.Role = models.RoleCommander
+	}
 	off := models.OfficerProfile{
-		ID:        fmt.Sprintf("OFF-%d", time.Now().Unix()%100000),
+		ID:        fmt.Sprintf("OFF-%d-%04d", time.Now().Unix()%100000, rand.Intn(9000)+1000),
 		Name:      body.Name,
-		Email:     strings.ToLower(body.Email),
+		Email:     strings.ToLower(strings.TrimSpace(body.Email)),
 		Role:      body.Role,
 		NRP:       body.NRP,
 		Unit:      body.Unit,
@@ -1243,8 +1247,25 @@ func (h *Handlers) HandleRegisterOfficer(c *gin.Context) {
 		return
 	}
 
-	_, _ = h.repo.AppendLedger("OFFICER_ENROLLMENT", "OFFICER_REGISTERED", off.ID, fmt.Sprintf("ROLE:%s:NRP:%s", off.Role, off.NRP), off.Email)
-	c.JSON(http.StatusOK, gin.H{"success": true, "officer": off})
+	now := time.Now()
+	token := ""
+	if h.mw != nil {
+		if jwtToken, err := h.mw.GenerateMilitaryToken(middleware.MilitaryTokenClaims{
+			Sub:       off.ID,
+			Name:      off.Name,
+			Email:     off.Email,
+			Role:      off.Role,
+			NRP:       off.NRP,
+			Issuer:    "OZIK-SENTINEL-PUSSIBERAD",
+			IssuedAt:  now.Unix(),
+			ExpiresAt: now.Add(24 * time.Hour).Unix(),
+		}); err == nil {
+			token = jwtToken
+		}
+	}
+
+	_, _ = h.repo.AppendLedger("OFFICER_ENROLLMENT", "OFFICER_REGISTERED", off.ID, fmt.Sprintf("ROLE:%s:NRP:%s", off.Role, off.NRP), off.Email, string(off.Role))
+	c.JSON(http.StatusOK, gin.H{"success": true, "officer": off, "token": token})
 }
 
 func (h *Handlers) HandleVerifyMemberNRP(c *gin.Context) {

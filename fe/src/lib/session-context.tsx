@@ -12,6 +12,7 @@ import {
 import type { EngineConfig, Session, TacticalRole } from "@/types/sentinel";
 import { API_BASE_URL } from "@/lib/api";
 import { getOrCreateBrowserOfficerIdentity } from "@/lib/autofill-generator";
+import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 const SESSION_KEY = "ozikra.session";
 const ENGINE_KEY = "ozikra.engine";
@@ -70,6 +71,7 @@ interface SessionContextValue {
     nrp: string
   ) => Promise<{ success: boolean; officer?: any; token?: string; error?: string }>;
   confirmOfficerSession: (officer: any, token?: string) => void;
+  refreshSessionFromStorage: () => Session | null;
   checkAndSignInGoogle: (
     email: string,
     name?: string
@@ -77,7 +79,7 @@ interface SessionContextValue {
   signInWithGoogle: () => Promise<void>;
   signInWithGoogleAccount: (account: GoogleAccountPayload) => void;
   enterSandbox: () => boolean;
-  signOut: () => void;
+  signOut: () => Promise<void>;
   switchSimulatedRole: (role: TacticalRole) => Promise<boolean>;
   setEngine: (config: EngineConfig) => void;
 }
@@ -100,54 +102,80 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [isSandboxExhausted, setIsSandboxExhausted] = useState(false);
   const [clearanceApproved, setClearanceApprovedState] = useState(false);
 
-  useEffect(() => {
-    // Hydrate persisted session after mount (client-only storage).
+  const hydrateSessionObject = useCallback((): Session | null => {
+    if (typeof window === "undefined") return null;
     const storedSession = readStorage<Session>(SESSION_KEY);
-    const storedEngine = readStorage<EngineConfig>(ENGINE_KEY);
-    const sandboxUsed = window.localStorage.getItem(SANDBOX_USED_KEY) === "true";
-    const clearance = window.sessionStorage.getItem(CLEARANCE_KEY) === "true";
+    if (!storedSession) return null;
 
-    queueMicrotask(() => {
-      const browserIdentity = getOrCreateBrowserOfficerIdentity();
-      if (storedSession) {
-        // Migrate legacy shared demo email/id to unique per-browser identity so users never share workspaces
-        const isLegacyShared =
-          !storedSession.user?.email ||
-          storedSession.user.email === "evaluator.sandbox@ozikra.mil.id" ||
-          storedSession.user.email === "evaluator.pussiberad@tni-ad.mil.id" ||
-          storedSession.user.email === "komando.siber@pussiberad.mil.id";
+    const browserIdentity = getOrCreateBrowserOfficerIdentity();
+    const isLegacyShared =
+      !storedSession.user?.email ||
+      storedSession.user.email === "evaluator.sandbox@ozikra.mil.id" ||
+      storedSession.user.email === "evaluator.pussiberad@tni-ad.mil.id" ||
+      storedSession.user.email === "komando.siber@pussiberad.mil.id";
 
-        const sanitized: Session = {
-          ...storedSession,
-          user: {
-            ...storedSession.user,
-            id: isLegacyShared ? browserIdentity.id : storedSession.user.id,
-            email: isLegacyShared ? browserIdentity.email : storedSession.user.email,
-            name: isLegacyShared ? browserIdentity.name : storedSession.user.name,
-            status: storedSession.user.status || "APPROVED",
-            nrp: storedSession.user.nrp || browserIdentity.nrp,
-          },
-        };
-        setSession(sanitized);
-        if (isLegacyShared) {
-          window.localStorage.setItem(SESSION_KEY, JSON.stringify(sanitized));
-        }
-      }
-      if (storedEngine) setEngineState(storedEngine);
-      setIsSandboxExhausted(sandboxUsed);
-      setClearanceApprovedState(clearance);
-      setReady(true);
-    });
+    const sanitized: Session = {
+      ...storedSession,
+      user: {
+        ...storedSession.user,
+        id: isLegacyShared ? browserIdentity.id : storedSession.user.id,
+        email: isLegacyShared ? browserIdentity.email : storedSession.user.email,
+        name: isLegacyShared ? browserIdentity.name : storedSession.user.name,
+        status: storedSession.user.status || "APPROVED",
+        nrp: storedSession.user.nrp || browserIdentity.nrp,
+      },
+    };
+    if (isLegacyShared) {
+      window.localStorage.setItem(SESSION_KEY, JSON.stringify(sanitized));
+    }
+    return sanitized;
   }, []);
 
+  const refreshSessionFromStorage = useCallback((): Session | null => {
+    const hydrated = hydrateSessionObject();
+    if (hydrated) {
+      setSession(hydrated);
+    }
+    return hydrated;
+  }, [hydrateSessionObject]);
+
+  useEffect(() => {
+    // Hydrate persisted session synchronously in a single React commit batch
+    const sanitized = hydrateSessionObject();
+    const storedEngine = readStorage<EngineConfig>(ENGINE_KEY);
+    const sandboxUsed = window.localStorage.getItem(SANDBOX_USED_KEY) === "true";
+    const clearance =
+      window.sessionStorage.getItem(CLEARANCE_KEY) === "true" || Boolean(sanitized);
+
+    if (sanitized) {
+      setSession(sanitized);
+    }
+    if (storedEngine) setEngineState(storedEngine);
+    setIsSandboxExhausted(sandboxUsed);
+    setClearanceApprovedState(clearance);
+    setReady(true);
+  }, [hydrateSessionObject]);
+
   const persist = useCallback((next: Session | null) => {
+    if (typeof window !== "undefined") {
+      if (next) window.localStorage.setItem(SESSION_KEY, JSON.stringify(next));
+      else window.localStorage.removeItem(SESSION_KEY);
+    }
     setSession(next);
-    if (next) window.localStorage.setItem(SESSION_KEY, JSON.stringify(next));
-    else window.localStorage.removeItem(SESSION_KEY);
+  }, []);
+
+  const setClearanceApproved = useCallback((approved: boolean) => {
+    setClearanceApprovedState(approved);
+    if (typeof window !== "undefined") {
+      if (approved) window.sessionStorage.setItem(CLEARANCE_KEY, "true");
+      else window.sessionStorage.removeItem(CLEARANCE_KEY);
+    }
   }, []);
 
   const confirmOfficerSession = useCallback(
     (off: any, token?: string) => {
+      const effectiveToken =
+        token || (typeof off?._jwtToken === "string" ? off._jwtToken : undefined);
       const browserIdentity = getOrCreateBrowserOfficerIdentity();
       const userObj = {
         id: off.id || browserIdentity.id,
@@ -157,22 +185,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         nrp: off.nrp || browserIdentity.nrp,
         unit: off.unit || browserIdentity.unit,
         rank: off.rank || "Perwira",
-        status: off.status || "APPROVED",
-        publicKey: off.publicKey,
+        status: "APPROVED" as const,
+        publicKey: off.publicKey || off.public_key,
         avatarUrl: off.avatarUrl,
       };
       persist({
         user: userObj,
         provider: "GOOGLE_OAUTH",
         simulatedRole: userObj.role,
-        token,
+        token: effectiveToken,
         issuedAt: new Date().toISOString(),
       });
+      setClearanceApproved(true);
       if (typeof window !== "undefined") {
-        if (token) {
-          window.localStorage.setItem("ozikra_mil_token", token);
-          window.localStorage.setItem("ozikra.active_token", token);
-          document.cookie = `ozik_token=${token}; path=/; max-age=86400; SameSite=Lax`;
+        if (effectiveToken) {
+          window.localStorage.setItem("ozikra_mil_token", effectiveToken);
+          window.localStorage.setItem("ozikra.active_token", effectiveToken);
+          document.cookie = `ozik_token=${effectiveToken}; path=/; max-age=86400; SameSite=Lax`;
         }
         // Also ensure backend issues a valid 3-part HMAC JWT bound to this specific user
         fetch(`${API_BASE_URL}/api/v1/auth/simulate-role`, {
@@ -204,16 +233,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           .catch(() => {});
       }
     },
-    [persist],
+    [persist, setClearanceApproved],
   );
-
-  const setClearanceApproved = useCallback((approved: boolean) => {
-    setClearanceApprovedState(approved);
-    if (typeof window !== "undefined") {
-      if (approved) window.sessionStorage.setItem(CLEARANCE_KEY, "true");
-      else window.sessionStorage.removeItem(CLEARANCE_KEY);
-    }
-  }, []);
 
   const resetSandboxLimit = useCallback(() => {
     setIsSandboxExhausted(false);
@@ -362,13 +383,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const signInWithGoogle = useCallback(async () => {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const client = getSupabaseBrowserClient();
 
-    if (supabaseUrl && supabaseAnonKey) {
+    if (client) {
       try {
-        const { createClient } = await import("@supabase/supabase-js");
-        const client = createClient(supabaseUrl, supabaseAnonKey);
         const { error } = await client.auth.signInWithOAuth({
           provider: "google",
           options: {
@@ -395,13 +413,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const client = getSupabaseBrowserClient();
 
-    if (supabaseUrl && supabaseAnonKey) {
+    if (client) {
       try {
-        const { createClient } = await import("@supabase/supabase-js");
-        const client = createClient(supabaseUrl, supabaseAnonKey);
         await client.auth.signOut();
       } catch (e) {
         console.warn("Supabase signOut error:", e);
@@ -409,6 +424,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
     if (typeof window !== "undefined") {
       window.localStorage.removeItem("ozikra.active_token");
+      window.localStorage.removeItem("ozikra_mil_token");
       document.cookie = "ozik_token=; path=/; max-age=0";
     }
     persist(null);
@@ -506,6 +522,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       checkAndSignInGoogle,
       verifyMemberNRP,
       confirmOfficerSession,
+      refreshSessionFromStorage,
       signInWithGoogle,
       signInWithGoogleAccount,
       enterSandbox,
@@ -525,6 +542,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       checkAndSignInGoogle,
       verifyMemberNRP,
       confirmOfficerSession,
+      refreshSessionFromStorage,
       signInWithGoogle,
       signInWithGoogleAccount,
       enterSandbox,

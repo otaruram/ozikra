@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     // 1. Try Go Backend first
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
       const resp = await fetch(
         `${BACKEND_URL}/api/v1/auth/officer?email=${encodeURIComponent(cleanEmail)}`,
         { cache: "no-store", signal: controller.signal }

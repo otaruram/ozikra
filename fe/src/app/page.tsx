@@ -1,12 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
 import { OzikLogo } from "@/components/brand/OzikLogo";
 import { Button, Eyebrow, Input, Mono, Tag } from "@/components/ui";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useSession } from "@/lib/session-context";
+import {
+  hasOAuthCallbackParams,
+  provisionAndConfirmGoogleOfficer,
+  resolveGoogleOAuthUser,
+} from "@/lib/supabase-browser";
 
 const PHASES = [
   {
@@ -31,8 +36,20 @@ const PHASES = [
 
 export default function LandingPage() {
   const router = useRouter();
-  const { session, isReady, verifyMemberNRP, signInWithGoogle, signOut } = useSession();
+  const {
+    session,
+    isReady,
+    verifyMemberNRP,
+    confirmOfficerSession,
+    signInWithGoogle,
+    signOut,
+  } = useSession();
   const [pending, setPending] = useState<"google" | "sprint" | null>(null);
+  const [isProcessingOAuth, setIsProcessingOAuth] = useState(false);
+  const [oauthStatus, setOauthStatus] = useState(
+    "Memproses otentikasi Google OAuth..."
+  );
+  const oauthHandledRef = useRef(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [modalStep, setModalStep] = useState<"VERIFY_SPRINT" | "PENDING_NOTICE">("VERIFY_SPRINT");
 
@@ -44,15 +61,47 @@ export default function LandingPage() {
   const [checkingApproval, setCheckingApproval] = useState(false);
   const [approvalStatusMsg, setApprovalStatusMsg] = useState<string | null>(null);
 
+  // Catch Supabase Google OAuth redirects that land on root "/" (#access_token=... or ?code=...)
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!hasOAuthCallbackParams()) return;
+    if (oauthHandledRef.current) return;
+    oauthHandledRef.current = true;
+
+    setIsProcessingOAuth(true);
+    setOauthStatus("Memverifikasi sesi Google SSO & menyiapkan Command Console...");
+
+    (async () => {
+      try {
+        const googleUser = await resolveGoogleOAuthUser();
+        if (googleUser) {
+          setOauthStatus(
+            `Identitas ${googleUser.email} terverifikasi. Membuka Command Console...`
+          );
+          const officer = await provisionAndConfirmGoogleOfficer(googleUser);
+          confirmOfficerSession(officer);
+          window.history.replaceState(null, "", "/");
+          router.replace("/dashboard");
+          return;
+        }
+      } catch (err) {
+        console.error("Root Google OAuth callback error:", err);
+      }
+      setIsProcessingOAuth(false);
+    })();
+  }, [confirmOfficerSession, router]);
+
+  useEffect(() => {
+    if (isProcessingOAuth) return;
     if (typeof window !== "undefined") {
+      if (hasOAuthCallbackParams()) return;
       const params = new URLSearchParams(window.location.search);
       if (params.get("auth")) return;
     }
     if (isReady && session) {
       router.replace("/dashboard");
     }
-  }, [isReady, session, router]);
+  }, [isReady, session, isProcessingOAuth, router]);
 
   // Check URL query parameters on return from Google Auth Callback
   useEffect(() => {
@@ -142,6 +191,24 @@ export default function LandingPage() {
 
 
 
+  if (isProcessingOAuth) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-ink p-6 text-paper">
+        <div className="flex flex-col items-center gap-4 border border-line-strong bg-surface p-8 shadow-2xl">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full border border-line bg-surface-2 animate-spin">
+            <Icon.Pulse size={24} />
+          </div>
+          <div className="font-mono text-sm uppercase tracking-widest text-paper text-center">
+            OZIKRA · GOOGLE SSO VERIFICATION
+          </div>
+          <div className="font-mono text-xs text-muted text-center max-w-sm">
+            {oauthStatus}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-ink">
       {/* Background */}
@@ -158,7 +225,7 @@ export default function LandingPage() {
             <span className="h-1.5 w-1.5 rounded-full bg-paper" /> PUSSIBERAD · Kartika Cyber Hackathon 2026
           </span>
           <ThemeToggle id="landing-theme-toggle" />
-          {isReady && session && session.user?.status === "APPROVED" ? (
+          {isReady && session ? (
             <Button id="nav-open-console" variant="primary" size="sm" onClick={() => router.push("/dashboard")} icon={<Icon.Arrow size={14} />}>
               Open Console ({session.user.name.split(" ")[0]})
             </Button>

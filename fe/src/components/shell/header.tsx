@@ -214,9 +214,10 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
               </button>
               <button
                 id="header-sign-out"
-                onClick={() => {
-                  signOut();
-                  router.push("/");
+                onClick={async () => {
+                  setUserOpen(false);
+                  await signOut();
+                  router.replace("/");
                 }}
                 className="flex w-full cursor-pointer items-center gap-2.5 border-t border-line px-4 py-2.5 text-left text-[13px] text-muted hover:bg-paper hover:text-ink"
               >

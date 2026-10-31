@@ -11,14 +11,16 @@ import { useSession } from "@/lib/session-context";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const { session, isReady, clearanceApproved } = useSession();
+  const { session, isReady, clearanceApproved, refreshSessionFromStorage } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    if (isReady && !session) {
+    if (!isReady || session) return;
+    const restored = refreshSessionFromStorage();
+    if (!restored) {
       router.replace("/");
     }
-  }, [isReady, session, router]);
+  }, [isReady, session, refreshSessionFromStorage, router]);
 
   if (!isReady || !session) {
     return (

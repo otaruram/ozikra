@@ -61,7 +61,7 @@ export function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () =>
       )}
     >
       {/* Brand */}
-      <Link href="/" className="flex h-16 shrink-0 items-center border-b border-line px-5">
+      <Link href="/dashboard" onClick={onNavigate} className="flex h-16 shrink-0 items-center border-b border-line px-5">
         <OzikLogo size={24} />
       </Link>
 
