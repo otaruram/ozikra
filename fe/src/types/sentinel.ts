@@ -103,6 +103,9 @@ export interface Asset {
   latitude?: number;
   longitude?: number;
   locationName?: string;
+  lastAction?: string;
+  lastActor?: string;
+  lastActionRole?: string;
   registeredAt: string;
   updatedAt?: string;
 }
@@ -267,6 +270,7 @@ export interface LedgerEntry {
   index: number;
   timestamp: string;
   actor: string;
+  actorRole?: string;
   action: string;
   assetId?: string | null;
   payloadHash: string;

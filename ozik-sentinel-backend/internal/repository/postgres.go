@@ -194,16 +194,17 @@ func (r *Repository) migrate() {
 		`ALTER TABLE assets ADD COLUMN IF NOT EXISTS longitude NUMERIC(9,6);`,
 		`ALTER TABLE assets ADD COLUMN IF NOT EXISTS location_name VARCHAR(255);`,
 		`ALTER TABLE assets ADD COLUMN IF NOT EXISTS owner_id VARCHAR(255) DEFAULT '';`,
+		`ALTER TABLE assets ADD COLUMN IF NOT EXISTS last_action VARCHAR(255) DEFAULT '';`,
+		`ALTER TABLE assets ADD COLUMN IF NOT EXISTS last_actor VARCHAR(255) DEFAULT '';`,
+		`ALTER TABLE assets ADD COLUMN IF NOT EXISTS last_action_role VARCHAR(64) DEFAULT '';`,
 		`ALTER TABLE telemetry_logs ADD COLUMN IF NOT EXISTS owner_id VARCHAR(255) DEFAULT '';`,
 		`ALTER TABLE telemetry_events ADD COLUMN IF NOT EXISTS owner_id VARCHAR(255) DEFAULT '';`,
 		`ALTER TABLE telemetry_correlations ADD COLUMN IF NOT EXISTS owner_id VARCHAR(255) DEFAULT '';`,
 		`ALTER TABLE ledger_entries ADD COLUMN IF NOT EXISTS owner_id VARCHAR(255) DEFAULT '';`,
+		`ALTER TABLE ledger_entries ADD COLUMN IF NOT EXISTS actor_role VARCHAR(64) DEFAULT '';`,
 		`ALTER TABLE audit_ledger ADD COLUMN IF NOT EXISTS owner_id VARCHAR(255) DEFAULT '';`,
+		`ALTER TABLE audit_ledger ADD COLUMN IF NOT EXISTS actor_role VARCHAR(64) DEFAULT '';`,
 		`ALTER TABLE maintenance_windows ADD COLUMN IF NOT EXISTS owner_id VARCHAR(255) DEFAULT '';`,
-		`DELETE FROM assets WHERE COALESCE(owner_id, '') = '';`,
-		`DELETE FROM telemetry_correlations WHERE COALESCE(owner_id, '') = '';`,
-		`DELETE FROM telemetry_logs WHERE COALESCE(owner_id, '') = '';`,
-		`DELETE FROM ledger_entries WHERE COALESCE(owner_id, '') = '';`,
 		`ALTER TABLE IF EXISTS assets ENABLE ROW LEVEL SECURITY;`,
 		`ALTER TABLE IF EXISTS audit_ledger ENABLE ROW LEVEL SECURITY;`,
 		`ALTER TABLE IF EXISTS cve_vulnerabilities ENABLE ROW LEVEL SECURITY;`,
@@ -247,8 +248,12 @@ func (r *Repository) migrate() {
 
 func (r *Repository) GetAssets(criticalOnly bool, limit, offset int, ownerID ...string) ([]models.Asset, int, error) {
 	owner := ""
+	roleFilter := ""
 	if len(ownerID) > 0 {
 		owner = strings.TrimSpace(ownerID[0])
+	}
+	if len(ownerID) > 1 {
+		roleFilter = strings.ToUpper(strings.TrimSpace(ownerID[1]))
 	}
 
 	if r.db == nil {
@@ -262,7 +267,12 @@ func (r *Repository) GetAssets(criticalOnly bool, limit, offset int, ownerID ...
 			if criticalOnly && !(a.IntegrityState == models.StateCompromised || a.IntegrityState == models.StateQuarantined || a.QRWindowStatus == models.WindowOpen) {
 				continue
 			}
-			res = append(res, a)
+			cp := a
+			if roleFilter != "" && roleFilter != "SUPER_ADMIN" && cp.LastActionRole != "" && !strings.EqualFold(cp.LastActionRole, roleFilter) {
+				cp.LastAction = "[TERENKRIPSI — OTORISASI PERAN LAIN]"
+				cp.LastActor = "CLASSIFIED"
+			}
+			res = append(res, cp)
 		}
 		total := len(res)
 		if offset > 0 && offset < len(res) {
@@ -301,10 +311,12 @@ func (r *Repository) GetAssets(criticalOnly bool, limit, offset int, ownerID ...
 		       a.status, a.integrity_state, a.trust_score, a.firmware_hash, a.qr_hash,
 		       a.qr_window_status, a.cve_count, a.registered_at,
 		       COALESCE(a.latitude, 0), COALESCE(a.longitude, 0), COALESCE(a.location_name, ''),
-		       COALESCE(a.owner_id, '')
+		       COALESCE(a.owner_id, ''),
+		       COALESCE(a.last_action, ''), COALESCE(a.last_actor, ''), COALESCE(a.last_action_role, ''),
+		       a.updated_at
 		FROM assets a
 		%s
-		ORDER BY a.created_at DESC
+		ORDER BY a.updated_at DESC, a.created_at DESC
 	`, whereClause)
 
 	if limit > 0 {
@@ -321,16 +333,17 @@ func (r *Repository) GetAssets(criticalOnly bool, limit, offset int, ownerID ...
 	for rows.Next() {
 		var a models.Asset
 		var typeStr, classStr, statusStr, integStr, winStr string
-		var regAt time.Time
+		var regAt, updAt time.Time
 		var trustScore sql.NullInt64
 		var lat, lng float64
-		var locName, ownID string
+		var locName, ownID, lastAct, lastActr, lastRole string
 
 		if err := rows.Scan(
 			&a.ID, &a.Name, &a.SerialNumber, &a.Vendor, &typeStr, &classStr,
 			&statusStr, &integStr, &trustScore, &a.FirmwareHash, &a.QRHash,
 			&winStr, &a.CVECount, &regAt,
 			&lat, &lng, &locName, &ownID,
+			&lastAct, &lastActr, &lastRole, &updAt,
 		); err == nil {
 			a.Type = models.AssetType(typeStr)
 			a.Classification = models.AssetClassification(classStr)
@@ -349,7 +362,15 @@ func (r *Repository) GetAssets(criticalOnly bool, limit, offset int, ownerID ...
 			}
 			a.LocationName = locName
 			a.OwnerID = ownID
+			a.LastAction = lastAct
+			a.LastActor = lastActr
+			a.LastActionRole = lastRole
+			if roleFilter != "" && roleFilter != "SUPER_ADMIN" && a.LastActionRole != "" && !strings.EqualFold(a.LastActionRole, roleFilter) {
+				a.LastAction = "[TERENKRIPSI — OTORISASI PERAN LAIN]"
+				a.LastActor = "CLASSIFIED"
+			}
 			a.RegisteredAt = regAt.Format(time.RFC3339)
+			a.UpdatedAt = updAt.Format(time.RFC3339)
 			result = append(result, a)
 		}
 	}
@@ -482,8 +503,8 @@ func (r *Repository) UpsertAsset(a models.Asset) error {
 
 	if r.db != nil {
 		_, err := r.db.Exec(`
-			INSERT INTO assets (id, name, serial_number, vendor, type, classification, status, integrity_state, trust_score, firmware_hash, qr_hash, qr_window_status, cve_count, latitude, longitude, location_name, owner_id, registered_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+			INSERT INTO assets (id, name, serial_number, vendor, type, classification, status, integrity_state, trust_score, firmware_hash, qr_hash, qr_window_status, cve_count, latitude, longitude, location_name, owner_id, last_action, last_actor, last_action_role, registered_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 			ON CONFLICT (id) DO UPDATE SET
 				name = EXCLUDED.name,
 				vendor = EXCLUDED.vendor,
@@ -498,10 +519,14 @@ func (r *Repository) UpsertAsset(a models.Asset) error {
 				longitude = CASE WHEN EXCLUDED.longitude != 0 THEN EXCLUDED.longitude ELSE assets.longitude END,
 				location_name = CASE WHEN EXCLUDED.location_name != '' THEN EXCLUDED.location_name ELSE assets.location_name END,
 				owner_id = CASE WHEN EXCLUDED.owner_id != '' THEN EXCLUDED.owner_id ELSE assets.owner_id END,
+				last_action = CASE WHEN EXCLUDED.last_action != '' THEN EXCLUDED.last_action ELSE assets.last_action END,
+				last_actor = CASE WHEN EXCLUDED.last_actor != '' THEN EXCLUDED.last_actor ELSE assets.last_actor END,
+				last_action_role = CASE WHEN EXCLUDED.last_action_role != '' THEN EXCLUDED.last_action_role ELSE assets.last_action_role END,
 				updated_at = CURRENT_TIMESTAMP
 		`, a.ID, a.Name, a.SerialNumber, a.Vendor, string(a.Type), string(a.Classification),
 			string(a.IntegrityState), string(a.IntegrityState), trust, a.FirmwareHash,
-			a.QRHash, string(a.QRWindowStatus), a.CVECount, lat, lng, a.LocationName, a.OwnerID)
+			a.QRHash, string(a.QRWindowStatus), a.CVECount, lat, lng, a.LocationName, a.OwnerID,
+			a.LastAction, a.LastActor, a.LastActionRole)
 		if err != nil {
 			log.Printf("[OZIK-DB] Error upserting asset %s: %v", a.ID, err)
 			return err
@@ -787,14 +812,38 @@ func (r *Repository) InsertCorrelation(corr models.TelemetryCorrelation) error {
 }
 
 // ----------------------------------------------------------------------------
-// Audit Ledger (Cryptographic SHA-256 Hash Chained)
+// Audit Ledger (Cryptographic SHA-256 Hash Chained + Role Scoped)
 // ----------------------------------------------------------------------------
 
-func (r *Repository) AppendLedger(actor, action, assetID, payload string, ownerID ...string) (*models.LedgerEntry, error) {
-	owner := ""
-	if len(ownerID) > 0 {
-		owner = strings.TrimSpace(ownerID[0])
+func inferActionRole(action string, explicitRole string) string {
+	r := strings.ToUpper(strings.TrimSpace(explicitRole))
+	if r == "COMMANDER" || r == "LOGISTICS_OFFICER" || r == "FORENSIC_AUDITOR" || r == "SUPER_ADMIN" {
+		return r
 	}
+	act := strings.ToUpper(action)
+	switch {
+	case strings.Contains(act, "GATEKEEPER") || strings.Contains(act, "SEAL") || strings.Contains(act, "MANIFEST") || strings.Contains(act, "SBOM"):
+		return "LOGISTICS_OFFICER"
+	case strings.Contains(act, "FORENSIC") || strings.Contains(act, "BAP") || strings.Contains(act, "INVESTIGAT"):
+		return "FORENSIC_AUDITOR"
+	case strings.Contains(act, "KILL_SWITCH") || strings.Contains(act, "ISOLAT") || strings.Contains(act, "SPRIN") || strings.Contains(act, "MAINTENANCE") || strings.Contains(act, "ANOMALY"):
+		return "COMMANDER"
+	default:
+		return "COMMANDER"
+	}
+}
+
+func (r *Repository) AppendLedger(actor, action, assetID, payload string, ownerAndRole ...string) (*models.LedgerEntry, error) {
+	owner := ""
+	actorRole := ""
+	if len(ownerAndRole) > 0 {
+		owner = strings.TrimSpace(ownerAndRole[0])
+	}
+	if len(ownerAndRole) > 1 {
+		actorRole = strings.TrimSpace(ownerAndRole[1])
+	}
+	actorRole = inferActionRole(action, actorRole)
+
 	prevHash := "0000000000000000000000000000000000000000000000000000000000000000"
 	index := 0
 
@@ -840,6 +889,7 @@ func (r *Repository) AppendLedger(actor, action, assetID, payload string, ownerI
 		Index:        index,
 		Timestamp:    time.Now().Format(time.RFC3339),
 		Actor:        actor,
+		ActorRole:    actorRole,
 		Action:       action,
 		AssetID:      assetID,
 		PayloadHash:  payloadHash,
@@ -850,29 +900,53 @@ func (r *Repository) AppendLedger(actor, action, assetID, payload string, ownerI
 
 	if r.db != nil {
 		_, _ = r.db.Exec(`
-			INSERT INTO ledger_entries (index, timestamp, actor, action, asset_id, payload_hash, previous_hash, hash, owner_id)
-			VALUES ($1, CURRENT_TIMESTAMP, $2, $3, $4, $5, $6, $7, $8)
-		`, entry.Index, entry.Actor, entry.Action, entry.AssetID, entry.PayloadHash, entry.PreviousHash, entry.Hash, owner)
+			INSERT INTO ledger_entries (index, timestamp, actor, actor_role, action, asset_id, payload_hash, previous_hash, hash, owner_id)
+			VALUES ($1, CURRENT_TIMESTAMP, $2, $3, $4, $5, $6, $7, $8, $9)
+		`, entry.Index, entry.Actor, entry.ActorRole, entry.Action, entry.AssetID, entry.PayloadHash, entry.PreviousHash, entry.Hash, owner)
 
-		payloadObj := map[string]interface{}{"raw": payload, "asset_id": assetID, "owner_id": owner}
+		payloadObj := map[string]interface{}{"raw": payload, "asset_id": assetID, "owner_id": owner, "actor_role": actorRole}
 		payloadBytes, _ := json.Marshal(payloadObj)
 		_, _ = r.db.Exec(`
-			INSERT INTO audit_ledger (prev_hash, current_hash, action, officer_id, payload_json, owner_id, timestamp)
-			VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
-		`, prevHash, currHash, action, actor, string(payloadBytes), owner)
+			INSERT INTO audit_ledger (prev_hash, current_hash, action, officer_id, actor_role, payload_json, owner_id, timestamp)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+		`, prevHash, currHash, action, actor, actorRole, string(payloadBytes), owner)
+
+		// Also synchronize latest activity directly onto the Asset in IT/OT Asset Registry
+		if assetID != "" && !strings.HasPrefix(assetID, "COMMAND_") && !strings.HasPrefix(assetID, "BLOCKCHAIN_") {
+			_, _ = r.db.Exec(`
+				UPDATE assets
+				SET last_action = $1, last_actor = $2, last_action_role = $3, updated_at = CURRENT_TIMESTAMP
+				WHERE id = $4
+			`, action, actor, actorRole, assetID)
+		}
 	}
 
 	r.memLock.Lock()
 	r.memLedger = append(r.memLedger, *entry)
+	if assetID != "" {
+		for i := range r.memAssets {
+			if r.memAssets[i].ID == assetID {
+				r.memAssets[i].LastAction = action
+				r.memAssets[i].LastActor = actor
+				r.memAssets[i].LastActionRole = actorRole
+				r.memAssets[i].UpdatedAt = entry.Timestamp
+				break
+			}
+		}
+	}
 	r.memLock.Unlock()
 
 	return entry, nil
 }
 
-func (r *Repository) GetLedger(limit, offset int, ownerID ...string) ([]models.LedgerEntry, int, error) {
+func (r *Repository) GetLedger(limit, offset int, ownerAndRole ...string) ([]models.LedgerEntry, int, error) {
 	owner := ""
-	if len(ownerID) > 0 {
-		owner = strings.TrimSpace(ownerID[0])
+	roleFilter := ""
+	if len(ownerAndRole) > 0 {
+		owner = strings.TrimSpace(ownerAndRole[0])
+	}
+	if len(ownerAndRole) > 1 {
+		roleFilter = strings.ToUpper(strings.TrimSpace(ownerAndRole[1]))
 	}
 	if r.db == nil {
 		r.memLock.RLock()
@@ -883,6 +957,11 @@ func (r *Repository) GetLedger(limit, offset int, ownerID ...string) ([]models.L
 			if owner != "" && !strings.EqualFold(e.OwnerID, owner) {
 				continue
 			}
+			effRole := inferActionRole(e.Action, e.ActorRole)
+			if roleFilter != "" && roleFilter != "SUPER_ADMIN" && !strings.EqualFold(effRole, roleFilter) {
+				continue
+			}
+			e.ActorRole = effRole
 			filtered = append(filtered, e)
 		}
 		total := len(filtered)
@@ -895,18 +974,31 @@ func (r *Repository) GetLedger(limit, offset int, ownerID ...string) ([]models.L
 		return filtered, total, nil
 	}
 
-	var whereSQL string
+	var conditions []string
 	var args []interface{}
+	argIdx := 1
+
 	if owner != "" {
-		whereSQL = "WHERE LOWER(COALESCE(owner_id, '')) = LOWER($1)"
+		conditions = append(conditions, fmt.Sprintf("LOWER(COALESCE(owner_id, '')) = LOWER($%d)", argIdx))
 		args = append(args, owner)
+		argIdx++
+	}
+	if roleFilter != "" && roleFilter != "SUPER_ADMIN" {
+		conditions = append(conditions, fmt.Sprintf("UPPER(COALESCE(NULLIF(actor_role, ''), 'COMMANDER')) = UPPER($%d)", argIdx))
+		args = append(args, roleFilter)
+		argIdx++
+	}
+
+	whereSQL := ""
+	if len(conditions) > 0 {
+		whereSQL = "WHERE " + strings.Join(conditions, " AND ")
 	}
 
 	var total int
 	_ = r.db.QueryRow(fmt.Sprintf(`SELECT COUNT(*) FROM ledger_entries %s`, whereSQL), args...).Scan(&total)
 
 	query := fmt.Sprintf(`
-		SELECT index, timestamp, actor, action, COALESCE(asset_id, ''), payload_hash, previous_hash, hash, COALESCE(owner_id, '')
+		SELECT index, timestamp, actor, COALESCE(actor_role, ''), action, COALESCE(asset_id, ''), payload_hash, previous_hash, hash, COALESCE(owner_id, '')
 		FROM ledger_entries
 		%s
 		ORDER BY index DESC
@@ -925,8 +1017,9 @@ func (r *Repository) GetLedger(limit, offset int, ownerID ...string) ([]models.L
 	for rows.Next() {
 		var e models.LedgerEntry
 		var ts time.Time
-		if err := rows.Scan(&e.Index, &ts, &e.Actor, &e.Action, &e.AssetID, &e.PayloadHash, &e.PreviousHash, &e.Hash, &e.OwnerID); err == nil {
+		if err := rows.Scan(&e.Index, &ts, &e.Actor, &e.ActorRole, &e.Action, &e.AssetID, &e.PayloadHash, &e.PreviousHash, &e.Hash, &e.OwnerID); err == nil {
 			e.Timestamp = ts.Format(time.RFC3339)
+			e.ActorRole = inferActionRole(e.Action, e.ActorRole)
 			list = append(list, e)
 		}
 	}

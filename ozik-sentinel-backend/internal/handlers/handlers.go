@@ -251,6 +251,40 @@ func (h *Handlers) getRequestOwnerID(c *gin.Context) string {
 	return "isolated-default-session"
 }
 
+func (h *Handlers) getRequestRole(c *gin.Context) string {
+	if roleVal, exists := c.Get("role"); exists {
+		if rStr := strings.ToUpper(strings.TrimSpace(fmt.Sprintf("%v", roleVal))); rStr != "" {
+			return rStr
+		}
+	}
+	if simRole := strings.ToUpper(strings.TrimSpace(c.GetHeader("X-Simulated-Role"))); simRole != "" {
+		return simRole
+	}
+	if qRole := strings.ToUpper(strings.TrimSpace(c.Query("role"))); qRole != "" {
+		return qRole
+	}
+
+	rawToken := strings.TrimSpace(c.GetHeader("X-Officer-Token"))
+	if rawToken == "" {
+		authHeader := strings.TrimSpace(c.GetHeader("Authorization"))
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			rawToken = strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+		}
+	}
+	if rawToken == "" {
+		if cookieToken, err := c.Cookie("ozik_token"); err == nil {
+			rawToken = strings.TrimSpace(cookieToken)
+		}
+	}
+	if rawToken != "" && h.mw != nil {
+		if claims, err := h.mw.VerifyMilitaryToken(rawToken); err == nil && claims != nil && claims.Role != "" {
+			return strings.ToUpper(string(claims.Role))
+		}
+	}
+
+	return "COMMANDER"
+}
+
 func resolveTacticalCoordinates(seed string) (float64, float64, string) {
 	bases := []struct {
 		Lat  float64
@@ -460,7 +494,8 @@ func (h *Handlers) HandleSupplyChainVerify(c *gin.Context) {
 	if off, exists := c.Get("officer_id"); exists {
 		actor = fmt.Sprintf("%v", off)
 	}
-	_, _ = h.repo.AppendLedger(actor, "GATEKEEPER_SEAL_ISSUED", assetID, fmt.Sprintf("SCORE:%d:STATUS:%s", analysis.TrustScore, analysis.Verdict), ownerID)
+	reqRole := h.getRequestRole(c)
+	_, _ = h.repo.AppendLedger(actor, "GATEKEEPER_SEAL_ISSUED", assetID, fmt.Sprintf("SCORE:%d:STATUS:%s", analysis.TrustScore, analysis.Verdict), ownerID, reqRole)
 
 	c.JSON(http.StatusOK, analysis)
 }
@@ -562,7 +597,8 @@ func (h *Handlers) HandleSIEMCheckIn(c *gin.Context) {
 	if off, exists := c.Get("officer_id"); exists {
 		actor = fmt.Sprintf("%v", off)
 	}
-	_, _ = h.repo.AppendLedger(actor, "MAINTENANCE_WINDOW_OPENED", targetAssetID, fmt.Sprintf("WINDOW:%s:EXPIRES:%s", win.ID, win.ExpiresAt), ownerID)
+	reqRole := h.getRequestRole(c)
+	_, _ = h.repo.AppendLedger(actor, "MAINTENANCE_WINDOW_OPENED", targetAssetID, fmt.Sprintf("WINDOW:%s:EXPIRES:%s", win.ID, win.ExpiresAt), ownerID, reqRole)
 
 	// Broadcast via SSE
 	h.siem.BroadcastSSE("MAINTENANCE_WINDOW_OPENED", win)
@@ -738,7 +774,8 @@ func (h *Handlers) HandleTriggerTestTelemetry(c *gin.Context) {
 		OwnerID:       ownerID,
 	})
 
-	_, _ = h.repo.AppendLedger("SIEM_CORRELATOR", "ZERO_TRUST_ANOMALY_DETECTED", targetAssetID, fmt.Sprintf("FW:%s:TX:%.0fKBPS", chosenFW, txKbps), ownerID)
+	reqRole := h.getRequestRole(c)
+	_, _ = h.repo.AppendLedger("SIEM_CORRELATOR", "ZERO_TRUST_ANOMALY_DETECTED", targetAssetID, fmt.Sprintf("FW:%s:TX:%.0fKBPS", chosenFW, txKbps), ownerID, reqRole)
 
 	c.JSON(http.StatusOK, models.TelemetryEvent{
 		ID:        fmt.Sprintf("TEL-ALERT-%d", time.Now().Unix()%100000),
@@ -941,13 +978,15 @@ func (h *Handlers) HandleForensicInvestigate(c *gin.Context) {
 	if off, exists := c.Get("officer_id"); exists {
 		actor = fmt.Sprintf("%v", off)
 	}
-	_, _ = h.repo.AppendLedger(actor, "RUN_FORENSIC_INVESTIGATION", target.ID, fmt.Sprintf("INV:%s:CONF:%.2f", invID, confidence), ownerID)
+	reqRole := h.getRequestRole(c)
+	_, _ = h.repo.AppendLedger(actor, "RUN_FORENSIC_INVESTIGATION", target.ID, fmt.Sprintf("INV:%s:CONF:%.2f", invID, confidence), ownerID, reqRole)
 
 	c.JSON(http.StatusOK, report)
 }
 
 func (h *Handlers) HandleForensicIsolate(c *gin.Context) {
 	ownerID := h.getRequestOwnerID(c)
+	reqRole := h.getRequestRole(c)
 	assetID := c.Param("asset_id")
 	if assetID == "" {
 		var body struct {
@@ -975,7 +1014,7 @@ func (h *Handlers) HandleForensicIsolate(c *gin.Context) {
 	}
 
 	// 3. Log into Audit Ledger
-	_, _ = h.repo.AppendLedger(actor, "KILL_SWITCH_NODE_ISOLATION", assetID, fmt.Sprintf("CMD:%s:RELAY_CUT", cmd.ID), ownerID)
+	_, _ = h.repo.AppendLedger(actor, "KILL_SWITCH_NODE_ISOLATION", assetID, fmt.Sprintf("CMD:%s:RELAY_CUT", cmd.ID), ownerID, reqRole)
 
 	// 4. Broadcast SSE
 	h.siem.BroadcastSSE("NODE_ISOLATED", gin.H{
@@ -1066,10 +1105,11 @@ func (h *Handlers) HandleExportForensicReport(c *gin.Context) {
 
 func (h *Handlers) HandleGetAssets(c *gin.Context) {
 	ownerID := h.getRequestOwnerID(c)
+	reqRole := h.getRequestRole(c)
 	criticalOnly := c.Query("critical") == "true"
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "0"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
-	assets, _, err := h.repo.GetAssets(criticalOnly, limit, offset, ownerID)
+	assets, _, err := h.repo.GetAssets(criticalOnly, limit, offset, ownerID, reqRole)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -1079,9 +1119,10 @@ func (h *Handlers) HandleGetAssets(c *gin.Context) {
 
 func (h *Handlers) HandleGetLedger(c *gin.Context) {
 	ownerID := h.getRequestOwnerID(c)
+	reqRole := h.getRequestRole(c)
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "0"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
-	entries, _, err := h.repo.GetLedger(limit, offset, ownerID)
+	entries, _, err := h.repo.GetLedger(limit, offset, ownerID, reqRole)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -1108,17 +1149,23 @@ func (h *Handlers) HandleVerifyLedger(c *gin.Context) {
 
 func (h *Handlers) HandleLogAuditAction(c *gin.Context) {
 	ownerID := h.getRequestOwnerID(c)
+	reqRole := h.getRequestRole(c)
 	var body struct {
-		Actor   string `json:"actor"`
-		Action  string `json:"action"`
-		AssetID string `json:"assetId"`
-		Payload string `json:"payload"`
+		Actor     string `json:"actor"`
+		ActorRole string `json:"actorRole"`
+		Action    string `json:"action"`
+		AssetID   string `json:"assetId"`
+		Payload   string `json:"payload"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	entry, err := h.repo.AppendLedger(body.Actor, body.Action, body.AssetID, body.Payload, ownerID)
+	roleToRecord := body.ActorRole
+	if roleToRecord == "" {
+		roleToRecord = reqRole
+	}
+	entry, err := h.repo.AppendLedger(body.Actor, body.Action, body.AssetID, body.Payload, ownerID, roleToRecord)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -1362,8 +1409,8 @@ func (h *Handlers) HandleSimulateRole(c *gin.Context) {
 		return
 	}
 
-	// Append real audit entry to Supabase audit_ledger scoped to this user
-	_, _ = h.repo.AppendLedger(name, "TACTICAL_ROLE_SWITCH", "COMMAND_STATION", fmt.Sprintf("SWITCHED_TO_ROLE:%s", targetRole), email)
+	// Append real audit entry to Supabase audit_ledger scoped to this user and target role
+	_, _ = h.repo.AppendLedger(name, "TACTICAL_ROLE_SWITCH", "COMMAND_STATION", fmt.Sprintf("SWITCHED_TO_ROLE:%s", targetRole), email, string(targetRole))
 
 	// Set cookie for browser session persistence
 	c.SetCookie("ozik_token", newToken, 86400, "/", "", false, false)

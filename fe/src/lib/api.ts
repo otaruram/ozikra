@@ -290,12 +290,16 @@ export const recordAuditAction = async (
 ): Promise<LedgerEntry | null> => {
   try {
     let actor = customActor;
-    if (!actor && typeof window !== "undefined") {
+    let actorRole = "";
+    if (typeof window !== "undefined") {
       try {
         const stored = localStorage.getItem("ozikra.session");
         if (stored) {
           const parsed = JSON.parse(stored);
-          actor = parsed?.user?.name || parsed?.simulatedRole || "LOGISTICS_OFFICER";
+          if (!actor) {
+            actor = parsed?.user?.name || parsed?.simulatedRole || "LOGISTICS_OFFICER";
+          }
+          actorRole = parsed?.simulatedRole || parsed?.user?.role || "";
         }
       } catch {}
     }
@@ -303,6 +307,7 @@ export const recordAuditAction = async (
       method: "POST",
       body: JSON.stringify({
         actor: actor || "PUSSIBERAD_OPERATOR",
+        actorRole,
         action,
         assetId,
         payload,

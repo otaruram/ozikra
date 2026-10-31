@@ -82,11 +82,13 @@ export default function LedgerPage() {
     algorithm: string;
   } | null>(null);
 
-  // Synchronize initial active view with user's military session role
+  // Synchronize active view with user's military session role and refetch role-isolated ledger
   useEffect(() => {
     if (role && ["LOGISTICS_OFFICER", "COMMANDER", "FORENSIC_AUDITOR", "SUPER_ADMIN"].includes(role)) {
       setActiveView(role as RoleView);
+      ledger.refetch();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role]);
 
   const rows = useMemo(() => {
@@ -148,6 +150,9 @@ export default function LedgerPage() {
     link.download = `OZIK_LEDGER_${activeView}_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
+    void recordAuditAction("LEDGER_HISTORY_EXPORT_CSV", rows[0]?.assetId || "LEDGER", `VIEW:${activeView}:ROWS:${rows.length}`).then(() =>
+      ledger.refetch(),
+    );
   };
 
   const exportJSON = () => {
@@ -159,6 +164,9 @@ export default function LedgerPage() {
     link.download = `OZIK_LEDGER_${activeView}_${new Date().toISOString().slice(0, 10)}.json`;
     link.click();
     URL.revokeObjectURL(url);
+    void recordAuditAction("LEDGER_HISTORY_EXPORT_JSON", rows[0]?.assetId || "LEDGER", `VIEW:${activeView}:ROWS:${rows.length}`).then(() =>
+      ledger.refetch(),
+    );
   };
 
   const downloadLogisticsReceipt = (item: LedgerEntry) => {
@@ -277,9 +285,9 @@ export default function LedgerPage() {
             </p>
           </div>
 
-          {/* Quick Perspective Tabs */}
+          {/* Quick Perspective Tabs (Locked to own role unless SUPER_ADMIN) */}
           <div className="flex flex-wrap items-center gap-1.5">
-            {ROLE_PERSPECTIVES.map((p) => {
+            {ROLE_PERSPECTIVES.filter((p) => role === "SUPER_ADMIN" || p.id === role).map((p) => {
               const isSelected = activeView === p.id;
               const isUserRole = role === p.id;
               return (
@@ -302,6 +310,11 @@ export default function LedgerPage() {
                 </button>
               );
             })}
+            {role !== "SUPER_ADMIN" && (
+              <span className="border border-line bg-surface-2 px-2.5 py-1.5 font-mono text-[10.5px] text-muted">
+                🔒 Riwayat Role Lain Dikunci (Hanya Super Admin)
+              </span>
+            )}
           </div>
         </div>
       </div>

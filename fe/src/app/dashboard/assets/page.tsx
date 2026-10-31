@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { RoleGate } from "@/components/shell/role-gate";
@@ -8,6 +8,7 @@ import {
   Button,
   DataTable,
   ErrorLine,
+  Eyebrow,
   Input,
   IntegrityTag,
   Mono,
@@ -20,11 +21,11 @@ import {
   type Column,
 } from "@/components/ui";
 import { useAction, useAsyncResource } from "@/hooks/use-async";
-import { fetchAssets, onUploadManifest } from "@/lib/api";
+import { fetchAssets, fetchLedger, onUploadManifest, recordAuditAction } from "@/lib/api";
 import { generateGatekeeperAutoFill } from "@/lib/autofill-generator";
 import { canIntakeAssets } from "@/lib/rbac";
 import { useSession } from "@/lib/session-context";
-import { ASSET_TYPE_LABEL, type Asset, type IntegrityState } from "@/types/sentinel";
+import { ASSET_TYPE_LABEL, ROLE_LABEL, type Asset, type IntegrityState, type LedgerEntry } from "@/types/sentinel";
 
 type Filter = "ALL" | IntegrityState;
 
@@ -42,20 +43,55 @@ const COLUMNS: Column<Asset>[] = [
   },
   { key: "trust", header: "Trust", render: (a) => <Mono>{a.trustScore == null ? "--" : `${a.trustScore}%`}</Mono> },
   {
-    key: "fw",
-    header: "Firmware SHA-256",
-    render: (a) => <Mono className="block max-w-[160px] truncate text-subtle">{a.firmwareHash ?? "--"}</Mono>,
+    key: "activity",
+    header: "Last Role Activity",
+    render: (a) =>
+      a.lastAction ? (
+        <div className="flex flex-col gap-0.5">
+          <Mono className="text-[11px] text-paper">{a.lastAction}</Mono>
+          <span className="font-mono text-[10px] text-muted">
+            {a.lastActionRole ? `[${a.lastActionRole}]` : ""} {a.lastActor ? `· ${a.lastActor}` : ""}
+          </span>
+        </div>
+      ) : (
+        <Mono className="text-subtle">SEALED_READY</Mono>
+      ),
   },
   { key: "state", header: "State", render: (a) => <IntegrityTag state={a.integrityState} /> },
+];
+
+const ROLE_ACTIVITY_COLUMNS: Column<LedgerEntry>[] = [
+  { key: "idx", header: "#", render: (e) => <Mono className="text-subtle">#{String(e.index).padStart(4, "0")}</Mono> },
+  {
+    key: "ts",
+    header: "Timestamp",
+    render: (e) => <Mono className="text-muted">{new Date(e.timestamp).toLocaleString("id-ID")}</Mono>,
+  },
+  {
+    key: "role",
+    header: "Otoritas Role",
+    render: (e) => <Tag tone="default">{e.actorRole || "COMMANDER"}</Tag>,
+  },
+  { key: "actor", header: "Personel Pelaksana", render: (e) => <span className="text-[12.5px] font-medium">{e.actor}</span> },
+  { key: "action", header: "Gerakan / Aktivitas Sistem", render: (e) => <Mono className="font-semibold text-paper">{e.action}</Mono> },
+  { key: "asset", header: "Target Asset ID", render: (e) => <Mono className="text-muted">{e.assetId || "CONSOLE_C2"}</Mono> },
 ];
 
 export default function AssetsPage() {
   const { role, session } = useSession();
   const assets = useAsyncResource(fetchAssets);
+  const roleLedger = useAsyncResource(fetchLedger);
   const quickIntake = useAction(onUploadManifest);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("ALL");
   const canIntake = role ? canIntakeAssets(role) || role === "COMMANDER" : false;
+
+  // Automatically refetch when user switches role so role-scoped history updates immediately
+  useEffect(() => {
+    assets.refetch();
+    roleLedger.refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role]);
 
   const handleAutoFillNewAsset = async () => {
     const bundle = generateGatekeeperAutoFill(session?.user?.email);
@@ -67,7 +103,7 @@ export default function AssetsPage() {
       manifestFile: bundle.manifestFile,
       sbomFile: bundle.sbomFile,
     });
-    await assets.refetch();
+    await Promise.all([assets.refetch(), roleLedger.refetch()]);
   };
 
   const rows = useMemo(() => {
@@ -108,6 +144,9 @@ export default function AssetsPage() {
     link.download = `OZIK_ASSETS_EXPORT_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
+    void recordAuditAction("ASSET_REGISTRY_EXPORT_CSV", rows[0]?.id || "REGISTRY", `ROWS:${rows.length}`).then(() =>
+      roleLedger.refetch(),
+    );
   };
 
   const exportJSON = () => {
@@ -119,6 +158,9 @@ export default function AssetsPage() {
     link.download = `OZIK_ASSETS_EXPORT_${new Date().toISOString().slice(0, 10)}.json`;
     link.click();
     URL.revokeObjectURL(url);
+    void recordAuditAction("ASSET_REGISTRY_EXPORT_JSON", rows[0]?.id || "REGISTRY", `ROWS:${rows.length}`).then(() =>
+      roleLedger.refetch(),
+    );
   };
 
   return (
@@ -225,6 +267,48 @@ export default function AssetsPage() {
           totalItems={pagination.totalItems}
           onPageChange={pagination.setPage}
           onPageSizeChange={pagination.setPageSize}
+        />
+      </Panel>
+
+      {/* Role-Scoped Activity History inside IT/OT Asset Registry */}
+      <Panel
+        bodyClassName="p-0"
+        eyebrow={
+          role === "SUPER_ADMIN"
+            ? "Otoritas Super Admin · Seluruh Riwayat Lintas Role"
+            : `Kompartemen Rahasia · Khusus Peran ${role ? ROLE_LABEL[role] : ""}`
+        }
+        title="Riwayat Gerakan & Aktivitas Operasional (Terkunci Sesuai Role)"
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Tag tone="inverted">
+              {role === "SUPER_ADMIN" ? "SUPER ADMIN: FULL VISIBILITY" : `ISOLASI ROLE: ${role || "COMMANDER"}`}
+            </Tag>
+            <Button size="sm" variant="outline" icon={<Icon.Refresh size={12} />} onClick={roleLedger.refetch}>
+              Refresh History
+            </Button>
+          </div>
+        }
+      >
+        <div className="border-b border-line bg-surface-2/60 px-4 py-3 font-mono text-[11px] text-muted">
+          {role === "SUPER_ADMIN" ? (
+            <span>
+              🔓 <strong>Mode Super Admin Aktif:</strong> Anda dapat memantau seluruh riwayat gerakan dari semua peran (Komandan, Perwira Logistik, dan Auditor Forensik) pada akun ini.
+            </span>
+          ) : (
+            <span>
+              🔒 <strong>Isolasi Kompartemen Peran ({role}):</strong> Riwayat gerakan di bawah ini hanya menampilkan aktivitas yang dilakukan oleh peran{" "}
+              <strong className="text-paper">{role ? ROLE_LABEL[role] : ""}</strong>. Peran lain tidak dapat melihat riwayat ini (kecuali Super Admin). Data tersimpan permanen dan tidak akan hilang.
+            </span>
+          )}
+        </div>
+        <DataTable
+          columns={ROLE_ACTIVITY_COLUMNS}
+          rows={(roleLedger.data || []).slice(0, 15)}
+          rowKey={(e) => e.hash}
+          isLoading={roleLedger.isLoading}
+          emptyTitle={`Belum ada riwayat aktivitas untuk peran ${role || "ini"}`}
+          emptyMessage="Setiap gerakan yang Anda lakukan (Intake Gatekeeper, Scan QR SIEM, Forensik RCA, Kill-Switch, atau Export) otomatis tercatat permanen di sini sesuai peran aktif Anda."
         />
       </Panel>
     </RoleGate>

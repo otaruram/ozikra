@@ -105,6 +105,9 @@ type Asset struct {
 	Longitude      *float64            `json:"longitude,omitempty"`
 	LocationName   string              `json:"locationName,omitempty"`
 	OwnerID        string              `json:"ownerId,omitempty"`
+	LastAction     string              `json:"lastAction,omitempty"`
+	LastActor      string              `json:"lastActor,omitempty"`
+	LastActionRole string              `json:"lastActionRole,omitempty"`
 	RegisteredAt   string              `json:"registeredAt"`
 	UpdatedAt      string              `json:"updatedAt,omitempty"`
 }
@@ -264,6 +267,7 @@ type LedgerEntry struct {
 	Index        int    `json:"index"`
 	Timestamp    string `json:"timestamp"`
 	Actor        string `json:"actor"`
+	ActorRole    string `json:"actorRole,omitempty"`
 	Action       string `json:"action"`
 	AssetID      string `json:"assetId,omitempty"`
 	PayloadHash  string `json:"payloadHash"`

@@ -148,9 +148,11 @@ func (s *SIEMService) CorrelateTelemetry(in TelemetryInput) CorrelationVerdict {
 	// Update asset status in Supabase if compromised or maintenance
 	if verdict == "ANOMALY" {
 		_ = s.repo.UpdateAssetStatus(in.AssetID, models.StateCompromised, "COMPROMISED")
+		_, _ = s.repo.AppendLedger("SIEM_CORRELATOR", "SIEM_ANOMALY_CORRELATED", in.AssetID, msg, ownerID, "COMMANDER")
 		log.Printf("[SIEM-ALERT] Zero-Trust Anomaly on %s: %s", in.AssetID, msg)
 	} else if hasWindow {
 		_ = s.repo.UpdateAssetStatus(in.AssetID, models.StateMaintenance, "MAINTENANCE")
+		_, _ = s.repo.AppendLedger("SIEM_CORRELATOR", "SIEM_AUTHORIZED_MAINTENANCE_TELEMETRY", in.AssetID, msg, ownerID, "COMMANDER")
 	}
 
 	// Broadcast live SSE event to all connected SIEM dashboards
