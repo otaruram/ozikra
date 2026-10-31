@@ -222,13 +222,15 @@ export default function ForensicsPage() {
                 <li key={t.id} className="relative">
                   <span
                     className={cn(
-                      "absolute -left-[25px] top-1 h-2 w-2 border border-paper",
-                      t.phase === "PHASE_3_ANOMALY" ? "bg-paper animate-pulse" : "bg-ink",
+                      "absolute -left-[25px] top-1 h-2.5 w-2.5 border",
+                      t.phase === "PHASE_3_ANOMALY"
+                        ? "border-crimson bg-crimson animate-pulse"
+                        : "border-brass bg-surface",
                     )}
                   />
                   <div className="flex items-center gap-2">
                     <Mono className="text-muted">{new Date(t.timestamp).toLocaleString("en-GB")}</Mono>
-                    <Tag tone={t.phase === "PHASE_3_ANOMALY" ? "inverted" : "muted"}>{PHASE_LABEL[t.phase]}</Tag>
+                    <Tag tone={t.phase === "PHASE_3_ANOMALY" ? "alert" : "muted"}>{PHASE_LABEL[t.phase]}</Tag>
                   </div>
                   <p className="mt-1.5 text-sm font-medium">{t.title}</p>
                   <p className="mt-0.5 text-[12.5px] leading-relaxed text-muted">{t.detail}</p>
@@ -277,10 +279,26 @@ export default function ForensicsPage() {
         {/* Response */}
         <Panel className="xl:col-span-3 min-w-0" eyebrow="Response" title="Tactical Response Actions">
           <div className="flex flex-col gap-4">
-            <div className={cn("border p-4", isolated ? "border-paper bg-paper text-ink" : "border-line bg-ink")}>
-              <Eyebrow className={isolated ? "text-ink/60" : undefined}>Node Status</Eyebrow>
-              <p className="mt-1 font-mono text-sm font-semibold">{isolated ? "[ISOLATED]" : assetId ? "CONNECTED" : "--"}</p>
-              <Mono className={cn("mt-1 block", isolated ? "text-ink/60" : "text-subtle")}>{assetId || "No asset selected"}</Mono>
+            <div
+              className={cn(
+                "border p-4",
+                isolated
+                  ? "border-crimson/65 bg-crimson/12 text-paper"
+                  : "border-line bg-ink",
+              )}
+            >
+              <Eyebrow>Status Node Target</Eyebrow>
+              <p
+                className={cn(
+                  "mt-1 font-mono text-sm font-semibold",
+                  isolated ? "text-crimson" : "text-accent",
+                )}
+              >
+                {isolated ? "▲ TERISOLASI (KILL-SWITCH)" : assetId ? "● TERHUBUNG" : "--"}
+              </p>
+              <Mono className="mt-1 block text-muted">
+                {assetId || "Belum ada aset dipilih"}
+              </Mono>
             </div>
 
             {canKillSwitch ? (

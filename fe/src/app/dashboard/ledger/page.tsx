@@ -268,20 +268,19 @@ export default function LedgerPage() {
       />
 
       {/* Role Perspective Selector Banner */}
-      <div className="border border-line-strong bg-surface p-4">
+      <div className="relative border border-line-strong bg-surface p-4 sm:p-5">
+        <span className="pointer-events-none absolute left-0 top-0 h-[2px] w-12 bg-brass" />
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-paper" />
-              <span className="font-mono text-xs font-bold uppercase tracking-wider text-paper">
-                PERSPEKTIF BUKU RIWAYAT PERAN AKTIF
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="h-2 w-2 bg-brass" />
+              <span className="font-display text-base font-medium text-paper">
+                Perspektif Buku Riwayat Peran Aktif
               </span>
-              <span className="border border-line bg-surface-2 px-2 py-0.5 font-mono text-[10px] text-muted">
-                Peran Sesi: <strong className="text-paper">{role || "SUPER_ADMIN"}</strong>
-              </span>
+              <Tag tone="brass">Peran Sesi: {role || "SUPER_ADMIN"}</Tag>
             </div>
-            <p className="text-xs text-muted font-mono">
-              Bentuk tampilan buku riwayat di bawah ini disesuaikan secara khusus dengan format operasional masing-masing peran militer:
+            <p className="text-xs leading-relaxed text-muted">
+              Format buku riwayat di bawah ini disesuaikan dengan tugas pokok dan kompartemen masing-masing peran militer:
             </p>
           </div>
 
@@ -294,17 +293,17 @@ export default function LedgerPage() {
                 <button
                   key={p.id}
                   onClick={() => setActiveView(p.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono transition-all border ${
+                  className={`flex cursor-pointer items-center gap-1.5 border px-3 py-1.5 font-mono text-xs transition-colors ${
                     isSelected
-                      ? "border-paper bg-paper text-ink font-bold shadow-md"
-                      : "border-line bg-surface-2 text-muted hover:border-paper hover:text-paper"
+                      ? "border-accent bg-accent text-accent-ink font-semibold"
+                      : "border-line bg-surface-2 text-muted hover:border-brass hover:text-paper"
                   }`}
                 >
                   <span>{p.icon}</span>
                   <span>{p.label}</span>
                   {isUserRole && (
-                    <span className={`text-[9px] px-1 py-0.2 rounded ${isSelected ? "bg-ink text-paper" : "bg-paper/20 text-paper"}`}>
-                      AKTIF
+                    <span className={`px-1.5 py-0.5 text-[9.5px] ${isSelected ? "bg-ink/20 text-accent-ink" : "bg-surface text-paper"}`}>
+                      Aktif
                     </span>
                   )}
                 </button>
@@ -312,7 +311,7 @@ export default function LedgerPage() {
             })}
             {role !== "SUPER_ADMIN" && (
               <span className="border border-line bg-surface-2 px-2.5 py-1.5 font-mono text-[10.5px] text-muted">
-                🔒 Riwayat Role Lain Dikunci (Hanya Super Admin)
+                🔒 Kompartemen Role Lain Terkunci (Khusus Super Admin)
               </span>
             )}
           </div>

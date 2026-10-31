@@ -115,7 +115,7 @@ function TopologyView({ topology }: { topology: AssetTopology }) {
             y1={s.y}
             x2={t.x}
             y2={t.y}
-            stroke={isBlastRadius ? "#ef4444" : "#2e2e2e"}
+            stroke={isBlastRadius ? "var(--crimson)" : "var(--line-strong)"}
             strokeWidth={isBlastRadius ? 1.8 : 1}
             strokeDasharray={isBlastRadius ? "4 2" : undefined}
           />
@@ -131,11 +131,11 @@ function TopologyView({ topology }: { topology: AssetTopology }) {
               y={p.y - 6}
               width={12}
               height={12}
-              fill={bad ? "#ef4444" : n.integrityState === "SECURE" ? "#10b981" : "#f59e0b"}
-              stroke="#fff"
+              fill={bad ? "var(--crimson)" : n.integrityState === "SECURE" ? "var(--accent)" : "var(--brass)"}
+              stroke="var(--paper)"
               className={bad ? "animate-pulse" : undefined}
             />
-            <text x={p.x} y={p.y + 20} textAnchor="middle" className="fill-[#bbb] font-mono text-[8.5px]">
+            <text x={p.x} y={p.y + 20} textAnchor="middle" fill="var(--muted)" className="font-mono text-[8.5px]">
               {n.id}
             </text>
           </g>

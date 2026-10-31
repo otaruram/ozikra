@@ -15,7 +15,6 @@ export function ThemeToggle({
   id = "theme-toggle-btn",
   showLabel = false,
   className = "",
-  size = "md",
 }: ThemeToggleProps) {
   const { theme, toggleTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -25,7 +24,6 @@ export function ThemeToggle({
   }, []);
 
   if (!mounted) {
-    // Avoid hydration mismatch by rendering a placeholder box with matching dimensions
     return (
       <div
         className={`h-9 w-9 shrink-0 border border-line-strong bg-transparent opacity-40 ${className}`}
@@ -40,35 +38,34 @@ export function ThemeToggle({
     <button
       id={id}
       onClick={toggleTheme}
-      className={`group relative flex h-9 cursor-pointer items-center justify-center gap-2 border border-line-strong bg-surface/50 px-2.5 transition-all duration-200 hover:border-paper hover:bg-surface hover:text-paper ${
+      className={`group relative flex h-9 cursor-pointer items-center justify-center gap-2 border border-line-strong bg-surface/70 px-2.5 transition-[border-color,background-color,color] duration-150 hover:border-brass hover:bg-surface-2 hover:text-paper ${
         showLabel ? "px-3" : "w-9"
       } ${className}`}
-      aria-label={`Switch to ${isDark ? "Light" : "Dark"} Mode`}
-      title={`Switch to ${isDark ? "Light" : "Dark"} Mode`}
+      aria-label={`Ubah ke mode ${isDark ? "Arsip Terang" : "Bunker Gelap"}`}
+      title={`Mode Material: ${isDark ? "Arsip Mabesad (Terang)" : "Bunker Kartika (Gelap)"}`}
     >
       <div className="relative flex items-center justify-center">
         {isDark ? (
           <Sun
-            size={15}
-            className="text-muted transition-transform duration-300 group-hover:rotate-45 group-hover:text-paper"
+            size={14}
+            className="text-brass transition-transform duration-300 group-hover:rotate-45"
           />
         ) : (
           <Moon
-            size={15}
-            className="text-muted transition-transform duration-300 group-hover:-rotate-12 group-hover:text-paper"
+            size={14}
+            className="text-accent transition-transform duration-300 group-hover:-rotate-12"
           />
         )}
       </div>
 
       {showLabel && (
-        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-muted group-hover:text-paper">
-          {isDark ? "Light" : "Dark"}
+        <span className="font-mono text-[10.5px] font-medium text-muted group-hover:text-paper">
+          {isDark ? "Arsip Terang" : "Bunker Gelap"}
         </span>
       )}
 
-      {/* Screen reader notification */}
       <span className="sr-only">
-        Current theme: {theme}. Click to switch theme.
+        Tema aktif: {theme}. Klik untuk mengganti tema.
       </span>
     </button>
   );

@@ -141,7 +141,7 @@ function PendingApprovalManager() {
       header: "Personel Baru",
       render: (o) => (
         <div className="flex items-center gap-2.5">
-          <span className="flex h-7 w-7 items-center justify-center border border-yellow-500/40 bg-yellow-500/10 font-mono text-[10px] text-yellow-400">
+          <span className="flex h-7 w-7 items-center justify-center border border-brass/50 bg-brass/12 font-mono text-[10px] font-semibold text-brass">
             {o.name.slice(0, 2).toUpperCase()}
           </span>
           <div>
@@ -162,7 +162,7 @@ function PendingApprovalManager() {
       render: (o) => (
         <div className="text-xs">
           <span className="font-medium text-paper">{o.rank || "Perwira"}</span>
-          <span className="text-muted block text-[11px]">{o.unit || "PUSSANSERAD"}</span>
+          <span className="text-muted block text-[11px]">{o.unit || "PUSSIBERAD"}</span>
         </div>
       ),
     },
@@ -174,12 +174,7 @@ function PendingApprovalManager() {
     {
       key: "status",
       header: "Status",
-      render: () => (
-        <span className="inline-flex items-center gap-1.5 border border-yellow-500/40 bg-yellow-500/10 px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-wider text-yellow-400">
-          <span className="h-1.5 w-1.5 rounded-full bg-yellow-400 animate-ping" />
-          PENDING
-        </span>
-      ),
+      render: () => <Tag tone="brass">◐ Pending</Tag>,
     },
     {
       key: "action",
@@ -191,18 +186,18 @@ function PendingApprovalManager() {
             variant="primary"
             loading={processingId === o.id}
             onClick={() => handleApprove(o.id, o.name)}
-            className="text-[11px] bg-emerald-600 hover:bg-emerald-500 border-none text-white"
+            className="text-[11px]"
           >
-            ✅ Setujui
+            Setujui
           </Button>
           <Button
             size="sm"
-            variant="outline"
+            variant="critical"
             disabled={processingId === o.id}
             onClick={() => handleReject(o.id, o.name)}
-            className="text-[11px] border-red-500/40 text-red-300 hover:bg-red-500/20"
+            className="text-[11px]"
           >
-            ❌ Tolak
+            Tolak
           </Button>
         </div>
       ),
@@ -213,20 +208,20 @@ function PendingApprovalManager() {
 
   return (
     <Panel
-      eyebrow="Section 02 · Super Admin Approval Queue"
+      eyebrow="Bagian II · Antrean Verifikasi Super Admin"
       title="Persetujuan Pendaftaran Personel Militer Baru"
       bodyClassName="p-0"
       actions={
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {pendingList.length > 0 && (
             <Button
               size="sm"
               variant="outline"
               loading={processingId === "all"}
               onClick={handleApproveAll}
-              className="border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/20 text-[11px]"
+              className="border-accent/50 bg-accent/10 text-accent hover:bg-accent hover:text-accent-ink text-[11px]"
             >
-              ⚡ Setujui Semua ({pendingList.length})
+              ★ Setujui Semua ({pendingList.length})
             </Button>
           )}
           <Button size="sm" variant="ghost" icon={<Icon.Refresh size={13} />} onClick={fetchPending} loading={loading}>
@@ -391,8 +386,8 @@ function EngineConfigPanel({ editable }: { editable: boolean }) {
 
   return (
     <Panel
-      eyebrow="Section 03"
-      title="AI Engine & Network Mode"
+      eyebrow="Bagian IV · Infrastruktur Inferensi AI"
+      title="Konfigurasi Mesin AI & Mode Jaringan Pertahanan"
       actions={
         <Button
           type="button"
@@ -401,9 +396,9 @@ function EngineConfigPanel({ editable }: { editable: boolean }) {
           onClick={handleAutoFillSumopod}
           disabled={!editable}
           icon={<Icon.Refresh size={12} />}
-          className="border-paper/40 text-paper text-[11px] hover:bg-paper hover:text-ink"
+          className="border-accent/50 bg-accent/10 text-accent text-[11px] hover:bg-accent hover:text-accent-ink"
         >
-          ⚡ Auto-Fill Sumopod AI Gateway
+          ★ Auto-Fill Sumopod AI Gateway
         </Button>
       }
     >
@@ -419,21 +414,23 @@ function EngineConfigPanel({ editable }: { editable: boolean }) {
                 disabled={!editable}
                 onClick={() => setDraft((d) => ({ ...d, mode: m.value }))}
                 className={cn(
-                  "flex cursor-pointer items-start gap-3 border p-4 text-left transition-all disabled:cursor-not-allowed",
-                  active ? "border-paper bg-paper text-ink" : "border-line hover:border-line-strong",
+                  "flex cursor-pointer items-start gap-3 border p-4 text-left transition-colors disabled:cursor-not-allowed",
+                  active
+                    ? "border-accent bg-accent/12 text-paper"
+                    : "border-line bg-surface-2/30 hover:border-line-strong",
                 )}
               >
                 <span
                   className={cn(
                     "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
-                    active ? "border-ink" : "border-muted",
+                    active ? "border-accent" : "border-muted",
                   )}
                 >
-                  {active && <span className="h-2 w-2 rounded-full bg-ink" />}
+                  {active && <span className="h-2 w-2 rounded-full bg-accent" />}
                 </span>
                 <span className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold">{m.title}</span>
-                  <span className={cn("font-mono text-[10.5px]", active ? "text-ink/60" : "text-muted")}>{m.sub}</span>
+                  <span className="font-display text-[15px] font-medium text-paper">{m.title}</span>
+                  <span className={cn("font-mono text-[10.5px]", active ? "text-accent" : "text-muted")}>{m.sub}</span>
                 </span>
               </button>
             );
@@ -577,9 +574,9 @@ export default function AdminPage() {
       />
 
       {/* Section 1 — Profile */}
-      <Panel eyebrow="Section 01" title="My Officer Profile">
+      <Panel eyebrow="Bagian I · Berkas Kredensial Perwira" title="Dossier Identitas Personel Aktif">
         <div className="flex flex-col gap-6 md:flex-row md:items-center">
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center bg-paper text-2xl font-semibold text-ink">
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center border border-brass/55 bg-brass/12 font-display text-2xl font-medium text-brass">
             {u.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={u.avatarUrl} alt={u.name} className="h-full w-full object-cover grayscale" />
@@ -589,23 +586,23 @@ export default function AdminPage() {
           </div>
           <div className="grid flex-1 grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
             <div className="flex flex-col gap-1">
-              <Eyebrow>Name</Eyebrow>
-              <span className="text-sm font-medium">{u.name}</span>
+              <Eyebrow>Nama Perwira</Eyebrow>
+              <span className="font-display text-[17px] font-medium text-paper">{u.name}</span>
             </div>
             <div className="flex flex-col gap-1">
-              <Eyebrow>Email</Eyebrow>
+              <Eyebrow>Email Dinas / SSO</Eyebrow>
               <Mono>{u.email}</Mono>
             </div>
             <div className="flex flex-col gap-1">
-              <Eyebrow>Assigned Tactical Role</Eyebrow>
+              <Eyebrow>Otoritas Taktis</Eyebrow>
               <div className="flex flex-wrap items-center gap-2">
-                <Tag tone="inverted">{u.role}</Tag>
-                {role !== u.role && <Tag tone="muted">Simulating {ROLE_LABEL[role]}</Tag>}
+                <Tag tone="brass">★ {u.role}</Tag>
+                {role !== u.role && <Tag tone="default">Simulasi: {ROLE_LABEL[role]}</Tag>}
               </div>
             </div>
             <div className="flex flex-col gap-1">
-              <Eyebrow>Digital Signature Public Key</Eyebrow>
-              <Mono className="truncate text-muted">{u.publicKey ?? "Not provisioned"}</Mono>
+              <Eyebrow>Kunci Publik Tanda Tangan</Eyebrow>
+              <Mono className="truncate text-muted">{u.publicKey ?? "ED25519-PUSSIBERAD-SEALED"}</Mono>
             </div>
           </div>
         </div>

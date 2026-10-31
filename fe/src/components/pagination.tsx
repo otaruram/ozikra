@@ -37,23 +37,20 @@ export function Pagination({
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 border-t border-line bg-surface/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between text-xs",
+        "flex flex-col gap-3 border-t border-line bg-surface-2/35 px-4 py-3 text-xs sm:flex-row sm:items-center sm:justify-between",
         className,
       )}
     >
-      {/* Left: Summary and Page Size Selector */}
       <div className="flex flex-wrap items-center gap-3">
-        <span className="font-mono text-[11px] text-muted">
-          Showing <span className="font-bold text-paper">{startItem}</span>–
-          <span className="font-bold text-paper">{endItem}</span> of{" "}
-          <span className="font-bold text-paper">{totalItems}</span> records
+        <span className="font-mono text-[11px] tabular-nums text-muted">
+          Menampilkan <span className="font-semibold text-paper">{startItem}</span>–
+          <span className="font-semibold text-paper">{endItem}</span> dari{" "}
+          <span className="font-semibold text-paper">{totalItems}</span> entri
         </span>
 
         <div className="flex items-center gap-1.5 border-l border-line pl-3">
-          <span className="font-mono text-[10px] uppercase tracking-wider text-muted">
-            Rows:
-          </span>
-          <div className="inline-flex border border-line bg-ink p-0.5">
+          <span className="text-[11px] text-muted">Baris:</span>
+          <div className="inline-flex border border-line-strong bg-ink p-0.5">
             {pageSizeOptions.map((opt) => (
               <button
                 key={opt}
@@ -61,12 +58,12 @@ export function Pagination({
                 type="button"
                 onClick={() => onPageSizeChange(opt)}
                 className={cn(
-                  "cursor-pointer px-2 py-0.5 font-mono text-[10.5px] transition-colors",
+                  "cursor-pointer px-2 py-0.5 font-mono text-[10.5px] tabular-nums transition-colors",
                   pageSize === opt
-                    ? "bg-paper text-ink font-bold"
-                    : "text-muted hover:text-paper hover:bg-paper/[0.05]",
+                    ? "bg-accent text-accent-ink font-semibold"
+                    : "text-muted hover:text-paper hover:bg-surface-2",
                 )}
-                title={`Show ${opt} rows per page`}
+                title={`Tampilkan ${opt} baris per halaman`}
               >
                 {opt}
               </button>
@@ -75,7 +72,6 @@ export function Pagination({
         </div>
       </div>
 
-      {/* Right: Page Navigation */}
       <div className="flex items-center gap-2">
         <button
           id={`${idPrefix}-pagination-prev`}
@@ -85,19 +81,19 @@ export function Pagination({
           className={cn(
             "flex h-8 cursor-pointer items-center gap-1.5 border border-line-strong bg-surface px-2.5 font-mono text-[11px] transition-colors",
             canPrev
-              ? "text-paper hover:border-paper hover:bg-paper hover:text-ink active:scale-95"
+              ? "text-paper hover:border-brass hover:bg-surface-2"
               : "cursor-not-allowed opacity-35 text-muted",
           )}
-          aria-label="Previous page"
+          aria-label="Halaman sebelumnya"
         >
           <Icon.Chevron size={12} className="rotate-90" />
-          <span className="hidden sm:inline">Prev</span>
+          <span className="hidden sm:inline">Sblm</span>
         </button>
 
-        <div className="flex items-center gap-1 border border-line bg-ink px-3 py-1 font-mono text-[11px]">
-          <span className="text-muted">Page</span>
-          <span className="font-bold text-paper">{safePage}</span>
-          <span className="text-muted">of</span>
+        <div className="flex items-center gap-1 border border-line bg-ink px-3 py-1 font-mono text-[11px] tabular-nums">
+          <span className="text-muted">Hal.</span>
+          <span className="font-semibold text-brass">{safePage}</span>
+          <span className="text-muted">/</span>
           <span className="text-paper">{totalPages}</span>
         </div>
 
@@ -109,12 +105,12 @@ export function Pagination({
           className={cn(
             "flex h-8 cursor-pointer items-center gap-1.5 border border-line-strong bg-surface px-2.5 font-mono text-[11px] transition-colors",
             canNext
-              ? "text-paper hover:border-paper hover:bg-paper hover:text-ink active:scale-95"
+              ? "text-paper hover:border-brass hover:bg-surface-2"
               : "cursor-not-allowed opacity-35 text-muted",
           )}
-          aria-label="Next page"
+          aria-label="Halaman berikutnya"
         >
-          <span className="hidden sm:inline">Next</span>
+          <span className="hidden sm:inline">Lanjut</span>
           <Icon.Chevron size={12} className="-rotate-90" />
         </button>
       </div>
@@ -122,10 +118,10 @@ export function Pagination({
   );
 }
 
-/**
- * Hook for managing pagination state and slicing data rows cleanly.
- */
-export function usePagination<T>(items: T[] | null | undefined, defaultPageSize = 10) {
+export function usePagination<T>(
+  items: T[] | null | undefined,
+  defaultPageSize = 10,
+) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
 

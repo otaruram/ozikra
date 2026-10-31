@@ -342,13 +342,17 @@ export function TacticalMap({ assets, onRefresh }: { assets: Asset[]; onRefresh?
           const liveBadge = document.getElementById(`live-badge-${asset.id}`);
           if (liveBadge) {
             liveBadge.className = `font-mono text-[9.5px] px-1.5 py-0.5 border ${
-              isAlert ? "border-red-500 bg-red-500/20 text-red-400" : isMaint ? "border-amber-400 bg-amber-400/20 text-amber-300" : "border-emerald-400 bg-emerald-400/20 text-emerald-300"
+              isAlert
+                ? "border-crimson bg-crimson/15 text-crimson font-semibold"
+                : isMaint
+                ? "border-brass bg-brass/15 text-brass font-medium"
+                : "border-accent bg-accent/15 text-accent font-medium"
             }`;
             liveBadge.textContent = asset.integrityState;
           }
           const liveQr = document.getElementById(`live-qr-${asset.id}`);
           if (liveQr) {
-            liveQr.className = `font-mono font-bold ${asset.qrWindowStatus === "OPEN" ? "text-amber-300" : "text-muted"}`;
+            liveQr.className = `font-mono font-bold ${asset.qrWindowStatus === "OPEN" ? "text-brass" : "text-muted"}`;
             liveQr.textContent = asset.qrWindowStatus;
           }
 
@@ -399,42 +403,46 @@ export function TacticalMap({ assets, onRefresh }: { assets: Asset[]; onRefresh?
         popupContent.innerHTML = `
           <div class="border-b border-line pb-2 mb-3">
             <div class="flex items-center justify-between">
-              <span class="font-mono text-[10px] uppercase tracking-wider text-muted">${asset.classification} // ${asset.type}</span>
+              <span class="font-mono text-[10px] text-brass">${asset.classification} // ${asset.type}</span>
               <span id="live-badge-${asset.id}" class="font-mono text-[9.5px] px-1.5 py-0.5 border ${
-                isAlert ? "border-red-500 bg-red-500/20 text-red-400" : isMaint ? "border-amber-400 bg-amber-400/20 text-amber-300" : "border-emerald-400 bg-emerald-400/20 text-emerald-300"
+                isAlert
+                  ? "border-crimson bg-crimson/15 text-crimson font-semibold"
+                  : isMaint
+                  ? "border-brass bg-brass/15 text-brass font-medium"
+                  : "border-accent bg-accent/15 text-accent font-medium"
               }">${asset.integrityState}</span>
             </div>
-            <div class="font-bold text-[13px] text-paper mt-1 leading-snug">${asset.name}</div>
+            <div class="font-display font-medium text-[15px] text-paper mt-1 leading-snug">${asset.name}</div>
             <div class="font-mono text-[10.5px] text-muted">${coords.locationName} · [${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}]</div>
           </div>
           <div class="grid grid-cols-2 gap-2 text-[11px] mb-3">
-            <div class="border border-line bg-ink/60 p-2">
-              <div class="text-[9px] uppercase text-muted font-mono">Temp Sensor</div>
-              <div id="live-temp-${asset.id}" class="font-mono font-bold ${isAlert ? "text-red-400" : "text-paper"}">Loading...</div>
+            <div class="border border-line bg-surface-2/60 p-2">
+              <div class="text-[9.5px] text-muted font-mono">Temp Sensor</div>
+              <div id="live-temp-${asset.id}" class="font-mono font-bold ${isAlert ? "text-crimson" : "text-paper"}">Loading...</div>
             </div>
-            <div class="border border-line bg-ink/60 p-2">
-              <div class="text-[9px] uppercase text-muted font-mono">Voltage / Bus</div>
+            <div class="border border-line bg-surface-2/60 p-2">
+              <div class="text-[9.5px] text-muted font-mono">Voltage / Bus</div>
               <div id="live-volt-${asset.id}" class="font-mono font-bold text-paper">Loading...</div>
             </div>
-            <div class="border border-line bg-ink/60 p-2">
-              <div class="text-[9px] uppercase text-muted font-mono">Network TX Rate</div>
+            <div class="border border-line bg-surface-2/60 p-2">
+              <div class="text-[9.5px] text-muted font-mono">Network TX Rate</div>
               <div id="live-tx-${asset.id}" class="font-mono font-bold text-paper">Loading...</div>
             </div>
-            <div class="border border-line bg-ink/60 p-2">
-              <div class="text-[9px] uppercase text-muted font-mono">QR Maintenance</div>
-              <div id="live-qr-${asset.id}" class="font-mono font-bold ${asset.qrWindowStatus === "OPEN" ? "text-amber-300" : "text-muted"}">${asset.qrWindowStatus}</div>
+            <div class="border border-line bg-surface-2/60 p-2">
+              <div class="text-[9.5px] text-muted font-mono">QR Maintenance</div>
+              <div id="live-qr-${asset.id}" class="font-mono font-bold ${asset.qrWindowStatus === "OPEN" ? "text-brass" : "text-muted"}">${asset.qrWindowStatus}</div>
             </div>
-            <div class="border border-line bg-ink/60 p-2 col-span-2">
-              <div class="text-[9px] uppercase text-muted font-mono">Firmware Hash Baseline</div>
+            <div class="border border-line bg-surface-2/60 p-2 col-span-2">
+              <div class="text-[9.5px] text-muted font-mono">Firmware Hash Baseline</div>
               <div class="font-mono text-[10px] text-muted truncate">${asset.firmwareHash || "d7a8f9021...verified"}</div>
             </div>
           </div>
           <div class="flex flex-col gap-1.5 pt-1">
-            <button id="popup-btn-forensics-${asset.id}" class="w-full py-1.5 px-3 bg-paper text-ink font-bold font-mono text-[10.5px] uppercase tracking-wider hover:bg-neutral-200 transition-colors cursor-pointer flex items-center justify-center gap-1.5">
-              <span>⚡ Run Forensics</span>
+            <button id="popup-btn-forensics-${asset.id}" class="w-full py-1.5 px-3 bg-accent text-accent-ink font-semibold font-mono text-[10.5px] hover:opacity-90 transition-opacity cursor-pointer flex items-center justify-center gap-1.5">
+              <span>★ Jalankan Forensik RCA</span>
             </button>
-            <button id="popup-btn-isolate-${asset.id}" class="w-full py-1.5 px-3 border border-red-500/60 bg-red-500/10 text-red-300 font-bold font-mono text-[10.5px] uppercase tracking-wider hover:bg-red-500/20 transition-colors cursor-pointer flex items-center justify-center gap-1.5">
-              <span>🚨 Isolate Node (Kill-Switch)</span>
+            <button id="popup-btn-isolate-${asset.id}" class="w-full py-1.5 px-3 border border-crimson/70 bg-crimson/12 text-crimson font-semibold font-mono text-[10.5px] hover:bg-crimson hover:text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5">
+              <span>▲ Isolasi Node (Kill-Switch)</span>
             </button>
           </div>
         `;
@@ -556,7 +564,7 @@ export function TacticalMap({ assets, onRefresh }: { assets: Asset[]; onRefresh?
   return (
     <div className="flex flex-col h-full w-full">
       {/* Tactical Map Header Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-surface/80 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-surface-2/50 p-3">
         <div className="flex flex-wrap items-center gap-1.5">
           <button
             id="map-filter-all"
@@ -565,41 +573,49 @@ export function TacticalMap({ assets, onRefresh }: { assets: Asset[]; onRefresh?
               handleFitAll();
             }}
             className={cn(
-              "px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-wider transition-colors border cursor-pointer",
-              filterState === "ALL" ? "border-paper bg-paper text-ink font-bold" : "border-line text-muted hover:text-paper",
+              "px-2.5 py-1 font-mono text-[11px] transition-colors border cursor-pointer",
+              filterState === "ALL"
+                ? "border-accent bg-accent text-accent-ink font-semibold"
+                : "border-line text-muted hover:text-paper",
             )}
           >
-            ALL NODES ({totalCount})
+            Semua Node ({totalCount})
           </button>
           <button
             id="map-filter-alert"
             onClick={() => setFilterState("ALERT")}
             className={cn(
-              "px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-wider transition-colors border cursor-pointer",
-              filterState === "ALERT" ? "border-red-500 bg-red-500 text-white font-bold" : "border-red-500/40 text-red-400 hover:bg-red-500/10",
+              "px-2.5 py-1 font-mono text-[11px] transition-colors border cursor-pointer",
+              filterState === "ALERT"
+                ? "border-crimson bg-crimson text-white font-semibold"
+                : "border-crimson/45 text-crimson hover:bg-crimson/10",
             )}
           >
-            🔴 CRITICAL ({alertCount})
+            ▲ Kritis ({alertCount})
           </button>
           <button
             id="map-filter-maint"
             onClick={() => setFilterState("MAINT")}
             className={cn(
-              "px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-wider transition-colors border cursor-pointer",
-              filterState === "MAINT" ? "border-amber-400 bg-amber-400 text-black font-bold" : "border-amber-400/40 text-amber-300 hover:bg-amber-400/10",
+              "px-2.5 py-1 font-mono text-[11px] transition-colors border cursor-pointer",
+              filterState === "MAINT"
+                ? "border-brass bg-brass text-accent-ink font-semibold"
+                : "border-brass/45 text-brass hover:bg-brass/10",
             )}
           >
-            🟡 MAINT ({maintCount})
+            ◐ Maint ({maintCount})
           </button>
           <button
             id="map-filter-secure"
             onClick={() => setFilterState("SECURE")}
             className={cn(
-              "px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-wider transition-colors border cursor-pointer",
-              filterState === "SECURE" ? "border-emerald-400 bg-emerald-400 text-black font-bold" : "border-emerald-400/40 text-emerald-400 hover:bg-emerald-400/10",
+              "px-2.5 py-1 font-mono text-[11px] transition-colors border cursor-pointer",
+              filterState === "SECURE"
+                ? "border-accent bg-accent text-accent-ink font-semibold"
+                : "border-accent/45 text-accent hover:bg-accent/10",
             )}
           >
-            🟢 SECURE ({secureCount})
+            ● Aman ({secureCount})
           </button>
         </div>
 
@@ -612,7 +628,7 @@ export function TacticalMap({ assets, onRefresh }: { assets: Asset[]; onRefresh?
             icon={<Icon.Refresh size={12} />}
             className="text-[11px] h-7 px-2"
           >
-            Center HQ (Jakarta)
+            Pusat Mabes (Jakarta)
           </Button>
           <Button
             id="map-fit-indonesia"
@@ -621,7 +637,7 @@ export function TacticalMap({ assets, onRefresh }: { assets: Asset[]; onRefresh?
             onClick={handleFitAll}
             className="text-[11px] h-7 px-2"
           >
-            Fit NKRI
+            Mandala NKRI
           </Button>
         </div>
       </div>
@@ -637,10 +653,10 @@ export function TacticalMap({ assets, onRefresh }: { assets: Asset[]; onRefresh?
         <div ref={mapContainerRef} className="h-full w-full z-10" style={{ height: "480px" }} />
 
         {/* Tactical Coordinates Overlay HUD */}
-        <div className="pointer-events-none absolute left-3 bottom-3 z-20 border border-line bg-ink/85 backdrop-blur-md p-2 font-mono text-[10px] text-muted space-y-0.5">
-          <div className="text-paper font-semibold">TACTICAL RADAR &amp; GEOLOCATION FEED</div>
-          <div>DATUM: WGS-84 · EPSG:3857 · CARTODB DARK MATTER</div>
-          <div>PUSAT OPERASI SIBER MILITER (CSIRT-AD)</div>
+        <div className="pointer-events-none absolute left-3 bottom-3 z-20 border border-line-strong bg-surface/90 backdrop-blur-md px-3 py-2 font-mono text-[10px] text-muted space-y-0.5">
+          <div className="text-brass font-semibold">★ PETA MANDALA SIBER · PUSSIBERAD TNI-AD</div>
+          <div>DATUM: WGS-84 · EPSG:3857 · GIS PERTAHANAN</div>
+          <div>PUSAT OPERASI SIBER ANGKATAN DARAT (CSIRT-AD)</div>
         </div>
       </div>
     </div>

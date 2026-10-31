@@ -11,11 +11,12 @@ export default function Icon() {
         style={{
           width: "100%",
           height: "100%",
-          background: "#09090b",
+          background: "#111913",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          borderRadius: "6px",
+          borderRadius: "4px",
+          border: "1px solid #2b3c2f",
         }}
       >
         <svg
@@ -25,27 +26,18 @@ export default function Icon() {
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
-          {/* Outer Tactical Hex Shield */}
+          {/* Outer Kartika Hexagonal Defense Shield */}
           <polygon
-            points="16,2 29,8 29,20 16,30 3,20 3,8"
-            stroke="#ffffff"
-            strokeWidth="2.2"
+            points="16,2 28.5,8.5 28.5,21 16,30 3.5,21 3.5,8.5"
+            stroke="#59ba82"
+            strokeWidth="2"
             fill="none"
           />
-          {/* Inner Radar Crosshair / Circuit Core */}
-          <circle
-            cx="16"
-            cy="16"
-            r="6"
-            stroke="#ffffff"
-            strokeWidth="1.5"
-            strokeDasharray="3 2"
+          {/* Inner Kartika Eka Paksi 5-Pointed Brass Star */}
+          <polygon
+            points="16,8.2 17.9,13.6 23.6,13.6 19,17 20.8,22.4 16,19 11.2,22.4 13,17 8.4,13.6 14.1,13.6"
+            fill="#d8b35c"
           />
-          <circle cx="16" cy="16" r="2.5" fill="#22c55e" />
-          <line x1="16" y1="6" x2="16" y2="10" stroke="#ffffff" strokeWidth="1.5" />
-          <line x1="16" y1="22" x2="16" y2="26" stroke="#ffffff" strokeWidth="1.5" />
-          <line x1="6" y1="16" x2="10" y2="16" stroke="#ffffff" strokeWidth="1.5" />
-          <line x1="22" y1="16" x2="26" y2="16" stroke="#ffffff" strokeWidth="1.5" />
         </svg>
       </div>
     ),

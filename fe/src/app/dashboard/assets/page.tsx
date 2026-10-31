@@ -39,7 +39,7 @@ const COLUMNS: Column<Asset>[] = [
   {
     key: "cve",
     header: "CVE",
-    render: (a) => (a.cveCount > 0 ? <Tag tone="inverted">{a.cveCount} Open</Tag> : <Mono className="text-subtle">0</Mono>),
+    render: (a) => (a.cveCount > 0 ? <Tag tone="alert">{a.cveCount} Open</Tag> : <Mono className="text-subtle">0</Mono>),
   },
   { key: "trust", header: "Trust", render: (a) => <Mono>{a.trustScore == null ? "--" : `${a.trustScore}%`}</Mono> },
   {
@@ -166,9 +166,9 @@ export default function AssetsPage() {
   return (
     <RoleGate route="assets">
       <PageHeader
-        eyebrow="Registry & Audit / Inventory"
-        title="IT/OT Asset Registry"
-        description="Master inventory of every hardware and software asset sealed through the gatekeeper, with live CVE exposure and integrity state."
+        eyebrow="Inventaris Matériel · Pussiberad TNI-AD"
+        title="Registri Aset IT & OT"
+        description="Inventaris induk perangkat keras, radar taktis, dan perangkat lunak yang telah disegel melalui Gatekeeper — lengkap dengan eksposur CVE dan status integritas aktual."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {canIntake && (
@@ -179,9 +179,9 @@ export default function AssetsPage() {
                 loading={quickIntake.isPending}
                 icon={<Icon.Refresh size={12} />}
                 onClick={handleAutoFillNewAsset}
-                className="border-paper/40 text-paper text-[11px] hover:bg-paper hover:text-ink"
+                className="border-accent/50 bg-accent/10 text-accent text-[11px] hover:bg-accent hover:text-accent-ink"
               >
-                ⚡ Auto-Fill &amp; Tambah Aset Unik
+                ★ Auto-Fill &amp; Tambah Aset Unik
               </Button>
             )}
             <Button id="assets-export-csv" size="sm" variant="outline" icon={<Icon.Arrow size={13} className="rotate-90" />} onClick={exportCSV}>
@@ -196,7 +196,7 @@ export default function AssetsPage() {
             {canIntake && (
               <Link href="/dashboard/gatekeeper">
                 <Button id="assets-intake" size="sm" variant="primary" icon={<Icon.Gate size={13} />}>
-                  Intake New Asset
+                  Intake Aset Baru
                 </Button>
               </Link>
             )}
@@ -206,8 +206,8 @@ export default function AssetsPage() {
 
       <Panel
         bodyClassName="p-0"
-        title="Registered Assets"
-        eyebrow={`${rows?.length ?? 0} records`}
+        title="Daftar Matériel Terdaftar"
+        eyebrow={`${rows?.length ?? 0} entri tercatat`}
         actions={
           <Segmented<Filter>
             value={filter}
@@ -229,23 +229,23 @@ export default function AssetsPage() {
               <Input
                 id="assets-search"
                 className="pl-9"
-                placeholder="Search by ID, name, vendor, serial…"
+                placeholder="Cari berdasarkan ID, nama aset, vendor, nomor seri…"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="font-mono text-[10.5px] text-muted">⚡ Auto-Fill Filter:</span>
-              <Button type="button" size="sm" variant="outline" className="text-[10px] py-0.5 px-2 h-7" onClick={() => { setQuery("Radar"); setFilter("ALL"); }}>
+              <span className="font-mono text-[10.5px] text-brass">★ Filter Cepat:</span>
+              <Button type="button" size="sm" variant="outline" className="text-[10.5px] py-0.5 px-2.5 h-7" onClick={() => { setQuery("Radar"); setFilter("ALL"); }}>
                 Radar (OT)
               </Button>
-              <Button type="button" size="sm" variant="outline" className="text-[10px] py-0.5 px-2 h-7" onClick={() => { setQuery(""); setFilter("COMPROMISED"); }}>
+              <Button type="button" size="sm" variant="outline" className="text-[10.5px] py-0.5 px-2.5 h-7" onClick={() => { setQuery(""); setFilter("COMPROMISED"); }}>
                 Compromised
               </Button>
-              <Button type="button" size="sm" variant="outline" className="text-[10px] py-0.5 px-2 h-7" onClick={() => { setQuery("Server"); setFilter("ALL"); }}>
+              <Button type="button" size="sm" variant="outline" className="text-[10.5px] py-0.5 px-2.5 h-7" onClick={() => { setQuery("Server"); setFilter("ALL"); }}>
                 Server Taktis
               </Button>
-              <Button type="button" size="sm" variant="outline" className="text-[10px] py-0.5 px-2 h-7 text-muted" onClick={() => { setQuery(""); setFilter("ALL"); }}>
+              <Button type="button" size="sm" variant="outline" className="text-[10.5px] py-0.5 px-2.5 h-7 text-muted" onClick={() => { setQuery(""); setFilter("ALL"); }}>
                 Reset
               </Button>
             </div>
@@ -257,8 +257,8 @@ export default function AssetsPage() {
           rows={pagination.paginatedItems}
           rowKey={(a) => a.id}
           isLoading={assets.isLoading}
-          emptyTitle="Registry empty"
-          emptyMessage="No assets returned from /assets. Register assets via the Supply-Chain Gatekeeper."
+          emptyTitle="Registri Aset Kosong"
+          emptyMessage="Belum ada aset di workspace Anda. Gunakan tombol 'Auto-Fill & Tambah Aset Unik' di atas atau segel aset baru melalui Supply-Chain Gatekeeper."
         />
         <Pagination
           idPrefix="assets-table"
@@ -275,30 +275,30 @@ export default function AssetsPage() {
         bodyClassName="p-0"
         eyebrow={
           role === "SUPER_ADMIN"
-            ? "Otoritas Super Admin · Seluruh Riwayat Lintas Role"
-            : `Kompartemen Rahasia · Khusus Peran ${role ? ROLE_LABEL[role] : ""}`
+            ? "Otoritas Super Admin · Seluruh Riwayat Lintas Peran"
+            : `Kompartemen Terisolasi · Khusus Peran ${role ? ROLE_LABEL[role] : ""}`
         }
-        title="Riwayat Gerakan & Aktivitas Operasional (Terkunci Sesuai Role)"
+        title="Riwayat Gerakan & Aktivitas Operasional (Terkunci Sesuai Peran)"
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Tag tone="inverted">
-              {role === "SUPER_ADMIN" ? "SUPER ADMIN: FULL VISIBILITY" : `ISOLASI ROLE: ${role || "COMMANDER"}`}
+            <Tag tone={role === "SUPER_ADMIN" ? "brass" : "default"}>
+              {role === "SUPER_ADMIN" ? "★ SUPER ADMIN: VISIBILITAS PENUH" : `▪ KOMPARTEMEN: ${role || "COMMANDER"}`}
             </Tag>
             <Button size="sm" variant="outline" icon={<Icon.Refresh size={12} />} onClick={roleLedger.refetch}>
-              Refresh History
+              Refresh Riwayat
             </Button>
           </div>
         }
       >
-        <div className="border-b border-line bg-surface-2/60 px-4 py-3 font-mono text-[11px] text-muted">
+        <div className="border-b border-line bg-surface-2/60 px-4 py-3 font-mono text-[11px] leading-relaxed text-muted">
           {role === "SUPER_ADMIN" ? (
             <span>
-              🔓 <strong>Mode Super Admin Aktif:</strong> Anda dapat memantau seluruh riwayat gerakan dari semua peran (Komandan, Perwira Logistik, dan Auditor Forensik) pada akun ini.
+              <strong className="text-brass">★ Otoritas Super Admin Aktif:</strong> Memantau seluruh riwayat gerakan dari semua kompartemen peran (Panglima Komando, Perwira Logistik, dan Auditor Forensik) pada akun ini.
             </span>
           ) : (
             <span>
-              🔒 <strong>Isolasi Kompartemen Peran ({role}):</strong> Riwayat gerakan di bawah ini hanya menampilkan aktivitas yang dilakukan oleh peran{" "}
-              <strong className="text-paper">{role ? ROLE_LABEL[role] : ""}</strong>. Peran lain tidak dapat melihat riwayat ini (kecuali Super Admin). Data tersimpan permanen dan tidak akan hilang.
+              <strong className="text-accent">▪ Isolasi Kompartemen Peran ({role}):</strong> Riwayat gerakan di bawah ini hanya menampilkan aktivitas dari peran{" "}
+              <strong className="text-paper">{role ? ROLE_LABEL[role] : ""}</strong>. Peran lain tidak dapat melihat riwayat ini (kecuali Super Admin). Data tersimpan permanen di rantai audit PostgreSQL.
             </span>
           )}
         </div>

@@ -44,8 +44,8 @@ const ASSET_COLUMNS: Column<Asset>[] = [
         <Mono className="text-subtle">--</Mono>
       ) : (
         <div className="flex items-center gap-2">
-          <div className="h-1 w-16 bg-line">
-            <div className="h-full bg-paper" style={{ width: `${a.trustScore}%` }} />
+          <div className="h-1.5 w-16 bg-line">
+            <div className="h-full bg-accent" style={{ width: `${a.trustScore}%` }} />
           </div>
           <Mono>{a.trustScore}%</Mono>
         </div>
@@ -71,9 +71,9 @@ export default function CommandCenterPage() {
   return (
     <RoleGate route="command">
       <PageHeader
-        eyebrow="Overview / Command Center"
+        eyebrow="Posko Utama · Pussiberad TNI-AD"
         title="Command Center"
-        description="Unified readiness posture across supply-chain intake, physical maintenance windows and cyber telemetry."
+        description="Postur kesiapsiagaan terpadu yang menghubungkan segel rantai pasok alutsista, jendela pemeliharaan fisik QR, dan telemetri siber."
         actions={
           <Button
             id="command-refresh"
@@ -84,7 +84,7 @@ export default function CommandCenterPage() {
               assets.refetch();
             }}
           >
-            Refresh
+            Segarkan Data
           </Button>
         }
       />
@@ -134,10 +134,10 @@ export default function CommandCenterPage() {
           title="Critical Asset Readiness Matrix"
           bodyClassName="p-0"
           actions={
-            <div className="hidden items-center gap-3 font-mono text-[10px] text-muted md:flex">
-              <span className="flex items-center gap-1.5"><span className="h-2 w-2 bg-paper" />Secure</span>
-              <span className="flex items-center gap-1.5"><span className="h-2 w-2 bg-muted" />Maint.</span>
-              <span className="flex items-center gap-1.5"><span className="h-2 w-2 border border-paper animate-pulse-border" />Compromised</span>
+            <div className="hidden items-center gap-3 font-mono text-[10.5px] text-muted md:flex">
+              <span className="flex items-center gap-1.5"><span className="h-2 w-2 bg-accent" />Secure</span>
+              <span className="flex items-center gap-1.5"><span className="h-2 w-2 bg-brass" />Maint.</span>
+              <span className="flex items-center gap-1.5"><span className="h-2 w-2 bg-crimson" />Compromised</span>
             </div>
           }
         >

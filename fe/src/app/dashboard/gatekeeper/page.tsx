@@ -282,10 +282,10 @@ export default function GatekeeperPage() {
               <div className="flex flex-col gap-5">
                 <div className="flex items-end justify-between border-b border-line pb-5">
                   <div className="flex flex-col gap-1">
-                    <Eyebrow>Supply Chain Trust Score</Eyebrow>
-                    <span className="font-mono text-5xl font-light tracking-tighter">{result.trustScore}%</span>
+                    <Eyebrow>Skor Kepercayaan Rantai Pasok</Eyebrow>
+                    <span className="font-display text-5xl font-medium tracking-[-0.03em] tabular-nums text-paper">{result.trustScore}%</span>
                   </div>
-                  <Tag tone={result.verdict === "APPROVED" ? "default" : "inverted"}>[{result.verdict}]</Tag>
+                  <Tag tone={result.verdict === "APPROVED" ? "default" : "alert"}>{result.verdict}</Tag>
                 </div>
                 <div className="flex flex-col gap-2">
                   <Eyebrow>Extracted Fields</Eyebrow>
@@ -317,18 +317,18 @@ export default function GatekeeperPage() {
                 </div>
                 {result.reasoning && (
                   <div className={cn(
-                    "border-l-2 p-3 font-mono text-[12px] leading-relaxed",
+                    "border p-3.5 text-xs leading-relaxed",
                     result.verdict === "QUARANTINED"
-                      ? "border-amber-400 bg-amber-500/10 text-amber-200"
-                      : "border-emerald-400 bg-emerald-500/10 text-emerald-200"
+                      ? "border-brass/55 bg-brass/10 text-paper"
+                      : "border-accent/50 bg-accent/10 text-paper"
                   )}>
-                    <div className="flex items-center gap-2 mb-1.5 font-bold uppercase tracking-wider">
-                      <span className="h-1.5 w-1.5 rounded-full bg-paper" />
+                    <div className="flex items-center gap-2 mb-1.5 font-mono text-[11px] font-semibold">
+                      <span className={cn("h-1.5 w-1.5 rounded-full", result.verdict === "QUARANTINED" ? "bg-brass" : "bg-accent")} />
                       <span>
-                        Ringkasan Integritas: [{result.verdict}] · Skor Kepercayaan {result.trustScore}% · {result.cveMatches?.length ?? 0} Kerentanan CVE
+                        Ringkasan Integritas: [{result.verdict}] · Skor {result.trustScore}% · {result.cveMatches?.length ?? 0} CVE
                       </span>
                     </div>
-                    <p className="text-[12.5px] font-sans leading-relaxed text-paper/90">{result.reasoning}</p>
+                    <p className="text-[12.5px] leading-relaxed text-muted">{result.reasoning}</p>
                   </div>
                 )}
               </div>

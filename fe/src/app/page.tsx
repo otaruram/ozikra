@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
 import { OzikLogo } from "@/components/brand/OzikLogo";
-import { Button, Eyebrow, Input, Mono, Tag } from "@/components/ui";
+import { Button, Input, Tag } from "@/components/ui";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useSession } from "@/lib/session-context";
 import {
@@ -13,26 +14,37 @@ import {
   resolveGoogleOAuthUser,
 } from "@/lib/supabase-browser";
 
-const PHASES = [
+type SpecimenKey = "PASSPORT" | "SIEM" | "BAIFS";
+
+const DOCTRINE_LEDGER = [
   {
-    no: "01",
-    title: "Pre-Deployment SBOM & QR Seal",
-    body: "Multimodal AI audits procurement manifests and SBOMs, scores vendor trust, matches CVEs and issues an HMAC-signed Tactical QR Passport.",
-    icon: Icon.Gate,
+    numeral: "I",
+    code: "Fase 01 · Pra-Penempatan",
+    title: "Supply-Chain Gatekeeper & Segel Paspor QR",
+    summary:
+      "Agen multimodal mengaudit dokumen manifest pengadaan serta CycloneDX/SPDX SBOM vendor sebelum perangkat masuk jaringan. Setiap perangkat yang lolos menerima tanda tangan HMAC-SHA256 pada Paspor QR fisik berstandar lapangan.",
+    artifact: "RFC-2104 HMAC Seal",
+    unit: "Logistik & Siber",
   },
   {
-    no: "02",
-    title: "Active OT/IT Telemetry",
-    body: "Lightweight SIEM correlates firmware and network events against physical QR check-ins. No scan, no window — any change is an anomaly.",
-    icon: Icon.Pulse,
+    numeral: "II",
+    code: "Fase 02 · Pengawasan Aktif",
+    title: "Korelasi Fisik-Siber & SIEM Ringan OT/IT",
+    summary:
+      "Perubahan konfigurasi jaringan atau firmware pada radar, radio taktis, maupun sensor gudang munisi dikorelasikan langsung terhadap pemindaian QR teknisi di lokasi. Tanpa jendela pemeliharaan sah, mutasi diklasifikasikan sebagai anomali.",
+    artifact: "Zero-Window Lock",
+    unit: "Posko Komando C2",
   },
   {
-    no: "03",
-    title: "Automated Forensic RCA",
-    body: "One-click investigation stitches Phase 1 and Phase 2 evidence into a root-cause report, executes node isolation and exports the official record.",
-    icon: Icon.Forensic,
+    numeral: "III",
+    code: "Fase 03 · Respons & Bukti Hukum",
+    title: "Forensik Digital Otomatis & Berkas BAIFS",
+    summary:
+      "Investigasi satu klik menyatukan bukti rantai pasok Fase I dengan log telemetri Fase II ke dalam rantai blok SHA-256 yang tak dapat diubah, mengeksekusi isolasi node (Kill-Switch), dan menerbitkan Berita Acara BAIFS resmi.",
+    artifact: "Rantai Blok SHA-256",
+    unit: "Auditor Forensik",
   },
-];
+] as const;
 
 export default function LandingPage() {
   const router = useRouter();
@@ -44,24 +56,46 @@ export default function LandingPage() {
     signInWithGoogle,
     signOut,
   } = useSession();
+
   const [pending, setPending] = useState<"google" | "sprint" | null>(null);
+  const [specimen, setSpecimen] = useState<SpecimenKey>("PASSPORT");
+  const [wibClock, setWibClock] = useState<string>("— WIB");
+
   const [isProcessingOAuth, setIsProcessingOAuth] = useState(false);
   const [oauthStatus, setOauthStatus] = useState(
-    "Memproses otentikasi Google OAuth..."
+    "Memproses otentikasi Google OAuth...",
   );
   const oauthHandledRef = useRef(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [modalStep, setModalStep] = useState<"VERIFY_SPRINT" | "PENDING_NOTICE">("VERIFY_SPRINT");
 
-  // Sprint / Nomor Pasukan Verification States (User Lama setelah login Google)
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [modalStep, setModalStep] = useState<"VERIFY_SPRINT" | "PENDING_NOTICE">(
+    "VERIFY_SPRINT",
+  );
   const [selectedOfficer, setSelectedOfficer] = useState<any>(null);
   const [sprintInput, setSprintInput] = useState("");
   const [sprintError, setSprintError] = useState<string | null>(null);
-  const [sprintSuccessText, setSprintSuccessText] = useState<string | null>(null);
+  const [sprintSuccessText, setSprintSuccessText] = useState<string | null>(
+    null,
+  );
   const [checkingApproval, setCheckingApproval] = useState(false);
-  const [approvalStatusMsg, setApprovalStatusMsg] = useState<string | null>(null);
+  const [approvalStatusMsg, setApprovalStatusMsg] = useState<string | null>(
+    null,
+  );
 
-  // Catch Supabase Google OAuth redirects that land on root "/" (#access_token=... or ?code=...)
+  useEffect(() => {
+    const tick = () =>
+      setWibClock(
+        new Date().toLocaleTimeString("en-GB", {
+          hour12: false,
+          timeZone: "Asia/Jakarta",
+        }) + " WIB",
+      );
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Catch Supabase Google OAuth redirects landing on root "/" (#access_token=... or ?code=...)
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!hasOAuthCallbackParams()) return;
@@ -69,14 +103,16 @@ export default function LandingPage() {
     oauthHandledRef.current = true;
 
     setIsProcessingOAuth(true);
-    setOauthStatus("Memverifikasi sesi Google SSO & menyiapkan Command Console...");
+    setOauthStatus(
+      "Memverifikasi sesi Google SSO & menyiapkan Konsol Komando...",
+    );
 
     (async () => {
       try {
         const googleUser = await resolveGoogleOAuthUser();
         if (googleUser) {
           setOauthStatus(
-            `Identitas ${googleUser.email} terverifikasi. Membuka Command Console...`
+            `Identitas ${googleUser.email} terverifikasi. Membuka Command Center...`,
           );
           const officer = await provisionAndConfirmGoogleOfficer(googleUser);
           confirmOfficerSession(officer);
@@ -103,7 +139,6 @@ export default function LandingPage() {
     }
   }, [isReady, session, isProcessingOAuth, router]);
 
-  // Check URL query parameters on return from Google Auth Callback
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
@@ -120,11 +155,11 @@ export default function LandingPage() {
             setSprintInput("");
             setSprintError(null);
             setSprintSuccessText(null);
-            if (data.officer.status === "PENDING") {
-              setModalStep("PENDING_NOTICE");
-            } else {
-              setModalStep("VERIFY_SPRINT");
-            }
+            setModalStep(
+              data.officer.status === "PENDING"
+                ? "PENDING_NOTICE"
+                : "VERIFY_SPRINT",
+            );
           }
         })
         .catch(console.error);
@@ -137,7 +172,7 @@ export default function LandingPage() {
       await signInWithGoogle();
     } catch (err: any) {
       console.error("Google Sign-In failed:", err);
-      alert("Gagal menginisiasi Supabase Google Auth: " + (err?.message || ""));
+      alert("Gagal menginisiasi Google Auth: " + (err?.message || ""));
       setPending(null);
     }
   };
@@ -150,15 +185,22 @@ export default function LandingPage() {
     setSprintError(null);
     setSprintSuccessText(null);
 
-    const res = await verifyMemberNRP(selectedOfficer.email, sprintInput.trim());
+    const res = await verifyMemberNRP(
+      selectedOfficer.email,
+      sprintInput.trim(),
+    );
     if (res.success) {
-      setSprintSuccessText("✅ Nomor Pasukan / Sprint Valid! Membuka sesi Command Console...");
+      setSprintSuccessText(
+        "Nomor Pasukan / Sprin terverifikasi. Membuka Konsol Komando...",
+      );
       setTimeout(() => {
         setShowAuthModal(false);
         router.push("/dashboard");
-      }, 500);
+      }, 450);
     } else {
-      setSprintError(res.error || "Nomor Pasukan / Sprint tidak cocok dengan identitas dinas.");
+      setSprintError(
+        res.error || "Nomor Pasukan / Sprin tidak sesuai dengan arsip dinas.",
+      );
       setPending(null);
     }
   };
@@ -166,42 +208,47 @@ export default function LandingPage() {
   const handleCheckApprovalStatus = async () => {
     if (!selectedOfficer?.email) return;
     setCheckingApproval(true);
-    setApprovalStatusMsg("Memeriksa status persetujuan di basis data PostgreSQL...");
+    setApprovalStatusMsg(
+      "Memeriksa status persetujuan pada basis data PostgreSQL...",
+    );
 
     try {
-      const res = await fetch(`/api/auth/officer?email=${encodeURIComponent(selectedOfficer.email)}`);
+      const res = await fetch(
+        `/api/auth/officer?email=${encodeURIComponent(selectedOfficer.email)}`,
+      );
       const data = await res.json();
       if (data.exists && data.officer) {
         setSelectedOfficer(data.officer);
         if (data.officer.status === "APPROVED") {
-          setApprovalStatusMsg("✅ Akun telah DISETUJUI oleh Super Admin! Silakan masukkan Nomor Pasukan.");
+          setApprovalStatusMsg(
+            "Akun telah disetujui. Silakan masukkan Nomor Pasukan / Sprin.",
+          );
           setModalStep("VERIFY_SPRINT");
         } else if (data.officer.status === "REJECTED") {
-          setApprovalStatusMsg("❌ Permohonan pendaftaran akun DITOLAK.");
+          setApprovalStatusMsg("Permohonan pendaftaran akun ditolak.");
         } else {
-          setApprovalStatusMsg("⏳ Status masih MENUNGGU PERSETUJUAN (PENDING) dari Super Admin.");
+          setApprovalStatusMsg("Status masih menunggu persetujuan Super Admin.");
         }
       }
-    } catch (err) {
-      setApprovalStatusMsg("Gagal menghubungi server database.");
+    } catch {
+      setApprovalStatusMsg("Gagal menghubungi server basis data.");
     } finally {
       setCheckingApproval(false);
     }
   };
 
-
-
   if (isProcessingOAuth) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-ink p-6 text-paper">
-        <div className="flex flex-col items-center gap-4 border border-line-strong bg-surface p-8 shadow-2xl">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full border border-line bg-surface-2 animate-spin">
-            <Icon.Pulse size={24} />
+        <div className="relative flex max-w-md flex-col items-center gap-4 border border-line-strong bg-surface p-8 shadow-2xl">
+          <span className="pointer-events-none absolute left-0 top-0 h-[2px] w-14 bg-brass" />
+          <div className="flex h-11 w-11 items-center justify-center border border-accent/50 bg-accent/10 text-accent animate-spin">
+            <Icon.Pulse size={20} />
           </div>
-          <div className="font-mono text-sm uppercase tracking-widest text-paper text-center">
-            OZIKRA · GOOGLE SSO VERIFICATION
+          <div className="font-display text-lg font-medium text-paper text-center">
+            Otentikasi Tunggal Google · Pussiberad
           </div>
-          <div className="font-mono text-xs text-muted text-center max-w-sm">
+          <div className="font-mono text-xs text-muted text-center">
             {oauthStatus}
           </div>
         </div>
@@ -210,122 +257,416 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col overflow-hidden bg-ink">
-      {/* Background */}
-      <div className="pointer-events-none absolute inset-0 bg-grid mask-radial" />
-      <div className="pointer-events-none absolute left-1/2 top-[-20%] h-[640px] w-[900px] -translate-x-1/2 rounded-full bg-paper/[0.06] blur-[120px]" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-paper/40 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-paper/[0.04] to-transparent animate-scan" />
+    <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-ink text-paper">
+      {/* Subtle Kartika Topographic Coordinate Grid */}
+      <div className="pointer-events-none absolute inset-0 bg-grid mask-radial opacity-75" />
 
-      {/* Navbar */}
-      <nav className="relative z-10 flex items-center justify-between gap-2 border-b border-line px-4 py-3.5 sm:px-6 md:px-10 md:py-4">
-        <OzikLogo size={26} />
-        <div className="flex items-center gap-2 sm:gap-3">
-          <span className="hidden items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted md:flex">
-            <span className="h-1.5 w-1.5 rounded-full bg-paper" /> PUSSIBERAD · Kartika Cyber Hackathon 2026
+      {/* Top Editorial Classification Ribbon */}
+      <div className="relative z-10 border-b border-line bg-surface-2/65 px-4 py-1.5 sm:px-6 md:px-10">
+        <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-2 font-mono text-[11px] text-muted">
+          <span className="flex items-center gap-2">
+            <span className="text-brass">★</span>
+            <span>
+              Kartika Cyber Hackathon 2026 · Pusat Siber TNI Angkatan Darat
+            </span>
           </span>
-          <ThemeToggle id="landing-theme-toggle" />
-          {isReady && session ? (
-            <Button id="nav-open-console" variant="primary" size="sm" onClick={() => router.push("/dashboard")} icon={<Icon.Arrow size={14} />}>
-              Open Console ({session.user.name.split(" ")[0]})
-            </Button>
-          ) : (
-            <Button id="nav-google-signin" variant="primary" size="sm" onClick={handleGoogleSignInClick} loading={pending === "google"} icon={<Icon.Google size={14} />}>
-              Sign In
-            </Button>
-          )}
+          <div className="hidden items-center gap-4 sm:flex">
+            <span>oziksentinel.biz.id</span>
+            <span className="text-subtle">|</span>
+            <span className="tabular-nums text-paper">{wibClock}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Masthead Navigation */}
+      <nav className="relative z-10 border-b border-line-strong bg-surface/80 backdrop-blur-md px-4 py-3.5 sm:px-6 md:px-10">
+        <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-3">
+          <OzikLogo size={28} />
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <Link
+              href="/verify"
+              className="hidden items-center gap-1.5 border border-line bg-surface-2/60 px-3 py-1.5 font-mono text-[11px] text-muted transition-colors hover:border-brass hover:text-paper md:inline-flex"
+            >
+              <span>Cek Segel Paspor QR</span>
+            </Link>
+            <ThemeToggle id="landing-theme-toggle" />
+            {isReady && session ? (
+              <Button
+                id="nav-open-console"
+                variant="primary"
+                size="sm"
+                onClick={() => router.push("/dashboard")}
+                icon={<Icon.Arrow size={14} />}
+              >
+                Buka Konsol ({session.user.name.split(" ")[0]})
+              </Button>
+            ) : (
+              <Button
+                id="nav-google-signin"
+                variant="primary"
+                size="sm"
+                onClick={handleGoogleSignInClick}
+                loading={pending === "google"}
+                icon={<Icon.Google size={14} />}
+              >
+                Masuk Konsol
+              </Button>
+            )}
+          </div>
         </div>
       </nav>
 
-      {/* Hero */}
-      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-5 py-10 sm:px-6 md:px-10 md:py-16">
-        <div className="flex flex-col items-start gap-6 md:gap-7">
-          <div className="max-w-full animate-fade-up">
-            <span className="inline-flex max-w-full flex-wrap items-center gap-2 border border-line-strong bg-surface/80 px-2.5 py-1.5 font-mono text-[9.5px] tracking-[0.12em] text-paper backdrop-blur sm:px-3 sm:text-[10.5px] sm:tracking-[0.16em]">
-              <span className="h-1.5 w-1.5 shrink-0 animate-blink bg-paper" />
-              <span className="break-words">[ZERO-TRUST IT/OT SUPPLY-CHAIN &amp; LIGHTWEIGHT SIEM]</span>
+      {/* Main Content — Hallmark Asymmetric Split Hero + Editorial Doctrine Table */}
+      <main className="relative z-10 mx-auto flex w-full max-w-[1280px] flex-1 flex-col px-4 py-8 sm:px-6 md:px-10 md:py-12">
+        {/* Section 1: Asymmetric Two-Column Hero (Fits Screen Cleanly) */}
+        <section className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12 lg:gap-10">
+          {/* Left Editorial Column (7 cols) */}
+          <div className="flex flex-col items-start gap-5 lg:col-span-7 lg:py-2 animate-fade-up">
+            <div className="inline-flex flex-wrap items-center gap-2 border border-line-strong bg-surface px-3 py-1 font-mono text-[11px] text-muted">
+              <span className="h-1.5 w-1.5 bg-accent" />
+              <span>Doktrin Zero-Trust IT/OT · Seri Alutsista Matra Darat</span>
+            </div>
+
+            <h1 className="font-display max-w-[18ch] text-[36px] font-medium leading-[1.06] tracking-[-0.025em] text-paper sm:text-[52px] lg:text-[60px]">
+              Integritas rantai pasok alutsista,{" "}
+              <em className="font-normal italic text-brass">
+                dari segel fisik hingga forensik siber.
+              </em>
+            </h1>
+
+            <p className="max-w-[58ch] text-[15px] leading-[1.68] text-muted sm:text-[16px]">
+              Menutup titik buta antara pemeliharaan fisik di lapangan dan
+              telemetri jaringan militer.{" "}
+              <strong className="font-medium text-paper">Ozik-Sentinel</strong>{" "}
+              menyegel manifest SBOM pra-penempatan dengan Paspor QR
+              kriptografi, mengunci jendela servis teknisi secara waktu nyata,
+              dan menyusun berkas forensik BAIFS otomatis.
+            </p>
+
+            {/* Primary Task-Driven Actions */}
+            <div className="flex w-full flex-col items-stretch gap-3 pt-1 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+              <Button
+                id="hero-google-oauth"
+                variant="primary"
+                size="lg"
+                className="w-full sm:w-auto"
+                onClick={handleGoogleSignInClick}
+                loading={pending === "google"}
+                icon={<Icon.Google size={16} />}
+              >
+                Masuk dengan Akun Google
+              </Button>
+              <Button
+                id="hero-register-new"
+                variant="outline"
+                size="lg"
+                className="w-full sm:w-auto"
+                onClick={() => router.push("/onboarding")}
+                icon={<Icon.Arrow size={14} />}
+              >
+                Registrasi Personel &amp; NRP Baru
+              </Button>
+            </div>
+
+            {/* Cryptographic Provenance Factsheet Strip */}
+            <div className="mt-2 grid w-full grid-cols-2 gap-px border border-line bg-line sm:grid-cols-3">
+              <div className="bg-surface px-3.5 py-2.5">
+                <div className="font-mono text-[10.5px] text-subtle">
+                  Standar Segel QR
+                </div>
+                <div className="mt-0.5 font-mono text-xs font-medium text-paper">
+                  HMAC-SHA256 · RFC 2104
+                </div>
+              </div>
+              <div className="bg-surface px-3.5 py-2.5">
+                <div className="font-mono text-[10.5px] text-subtle">
+                  Buku Audit Bukti
+                </div>
+                <div className="mt-0.5 font-mono text-xs font-medium text-paper">
+                  Immutable Hash-Chain
+                </div>
+              </div>
+              <div className="col-span-2 bg-surface px-3.5 py-2.5 sm:col-span-1">
+                <div className="font-mono text-[10.5px] text-subtle">
+                  Arsitektur Posko
+                </div>
+                <div className="mt-0.5 font-mono text-xs font-medium text-accent">
+                  Cloud &amp; Air-Gapped Ready
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Live Operational Specimen Column (5 cols) */}
+          <div
+            className="flex flex-col border border-line-strong bg-surface shadow-xl lg:col-span-5 animate-fade-up"
+            style={{ animationDelay: "90ms" }}
+          >
+            {/* Specimen Header */}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-surface-2/60 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 bg-brass" />
+                <span className="font-mono text-[11px] font-medium text-paper">
+                  Spesimen Berkas Operasional
+                </span>
+              </div>
+              <Tag tone="default">Posko Pussiberad</Tag>
+            </div>
+
+            {/* Interactive Phase Selector Tabs */}
+            <div className="grid grid-cols-3 border-b border-line bg-ink text-xs">
+              {(
+                [
+                  { id: "PASSPORT", label: "I · Paspor QR" },
+                  { id: "SIEM", label: "II · Log SIEM" },
+                  { id: "BAIFS", label: "III · BAIFS" },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setSpecimen(tab.id)}
+                  className={`cursor-pointer border-r border-line py-2.5 font-mono text-[11px] last:border-r-0 transition-colors ${
+                    specimen === tab.id
+                      ? "bg-accent text-accent-ink font-semibold"
+                      : "text-muted hover:bg-surface-2 hover:text-paper"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Specimen Body — Real Functional Artifacts (No Placeholder Boxes) */}
+            <div className="flex flex-col gap-3.5 p-4 sm:p-5">
+              {specimen === "PASSPORT" && (
+                <>
+                  <div className="flex items-start justify-between gap-3 border border-line bg-surface-2/45 p-3.5">
+                    <div className="space-y-1">
+                      <div className="font-mono text-[10.5px] text-brass">
+                        Sertifikat Alutsista · MIL-STD-810H
+                      </div>
+                      <div className="font-display text-lg font-medium text-paper">
+                        Radar Avionik Taktis Unit-204
+                      </div>
+                      <div className="font-mono text-[11px] text-muted">
+                        Vendor: PT Len Industri · Skor Kepercayaan: 98/100
+                      </div>
+                    </div>
+                    {/* Crisp Vector QR Matrix Stamp */}
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center border border-line-strong bg-paper p-1.5 text-ink">
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="h-full w-full"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.9"
+                      >
+                        <rect x="3" y="3" width="7" height="7" />
+                        <rect
+                          x="5"
+                          y="5"
+                          width="3"
+                          height="3"
+                          fill="currentColor"
+                        />
+                        <rect x="14" y="3" width="7" height="7" />
+                        <rect
+                          x="16"
+                          y="5"
+                          width="3"
+                          height="3"
+                          fill="currentColor"
+                        />
+                        <rect x="3" y="14" width="7" height="7" />
+                        <rect
+                          x="5"
+                          y="16"
+                          width="3"
+                          height="3"
+                          fill="currentColor"
+                        />
+                        <path d="M14 14h3v3h-3z" fill="currentColor" />
+                        <path d="M18 18h3v3h-3z" fill="currentColor" />
+                        <path d="M14 19h2v2h-2z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <pre className="overflow-x-auto border border-line bg-ink p-3.5 font-mono text-[11px] leading-relaxed text-muted">
+                    <span className="text-brass">
+                      $ ozik-gatekeeper verify --asset AST-RADAR-204
+                    </span>
+                    {"\n"}sbom.format      : CycloneDX 1.5 (0 CVE Kritis)
+                    {"\n"}hmac.rfc2104     : 9f4c8e21a0b7...d41e63b9
+                    {"\n"}status.gerbang   :{" "}
+                    <span className="text-accent font-semibold">
+                      TERSEGEL &amp; SAH DITEMPATKAN
+                    </span>
+                  </pre>
+                </>
+              )}
+
+              {specimen === "SIEM" && (
+                <>
+                  <div className="flex items-center justify-between border border-line bg-surface-2/45 px-3.5 py-2.5">
+                    <div>
+                      <div className="font-mono text-[10.5px] text-muted">
+                        Korelasi Jendela Servis Fisik
+                      </div>
+                      <div className="font-display text-base font-medium text-paper">
+                        Deteksi Mutasi Tanpa Scan Paspor QR
+                      </div>
+                    </div>
+                    <Tag tone="alert">▲ Anomali</Tag>
+                  </div>
+                  <pre className="overflow-x-auto border border-line bg-ink p-3.5 font-mono text-[11px] leading-relaxed text-muted">
+                    <span className="text-brass">
+                      $ tail -n 4 /var/pussiberad/siem-correlator.log
+                    </span>
+                    {"\n"}19:14:02 [FW ] AST-RADIO-318 · Mutasi hash bootloader
+                    {"\n"}19:14:02 [QR ] Jendela teknisi: CLOSED (0 pemindaian)
+                    {"\n"}19:14:03 [C2 ] Putusan:{" "}
+                    <span className="text-crimson font-semibold">
+                      UNAUTHORIZED_PHYSICAL_TAMPER
+                    </span>
+                    {"\n"}19:14:03 [LED] Blok #0042 ditautkan ke rantai SHA-256
+                  </pre>
+                </>
+              )}
+
+              {specimen === "BAIFS" && (
+                <>
+                  <div className="flex items-center justify-between border border-line bg-surface-2/45 px-3.5 py-2.5">
+                    <div>
+                      <div className="font-mono text-[10.5px] text-brass">
+                        Berita Acara Investigasi Forensik Siber
+                      </div>
+                      <div className="font-display text-base font-medium text-paper">
+                        Isolasi Node &amp; Ekspor Bukti Hukum PDF
+                      </div>
+                    </div>
+                    <Tag tone="brass">BAIFS Resmi</Tag>
+                  </div>
+                  <pre className="overflow-x-auto border border-line bg-ink p-3.5 font-mono text-[11px] leading-relaxed text-muted">
+                    <span className="text-brass">
+                      $ ozik-forensics rca --isolate AST-RADIO-318
+                    </span>
+                    {"\n"}fase_1.manifest  : Cocok (Segel PT Len utuh)
+                    {"\n"}fase_2.vektor    : Injeksi UART fisik tanpa Sprin QR
+                    {"\n"}tindakan.c2      :{" "}
+                    <span className="text-accent font-semibold">
+                      NODE_QUARANTINED · BERKAS_PDF_SIAP
+                    </span>
+                  </pre>
+                </>
+              )}
+
+              <div className="flex items-center justify-between border-t border-line pt-2.5 font-mono text-[11px]">
+                <span className="text-subtle">
+                  Domain verifikasi: oziksentinel.biz.id
+                </span>
+                <Link
+                  href="/verify"
+                  className="font-medium text-brass underline-offset-4 hover:underline"
+                >
+                  Uji Validator QR →
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Editorial Double Hairline Divider */}
+        <div className="dossier-rule my-10 md:my-14" />
+
+        {/* Section 2: Hallmark Editorial Doctrine Index (No 3-Column Icon-Card Slop) */}
+        <section className="flex flex-col gap-4">
+          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+            <div>
+              <span className="font-mono text-[11px] text-brass">
+                Arsitektur Rantai Bukti Tunggal
+              </span>
+              <h2 className="font-display mt-1 text-2xl font-medium tracking-[-0.02em] text-paper sm:text-[30px]">
+                Tiga tahapan pengamanan fisik-ke-siber dalam satu buku besar.
+              </h2>
+            </div>
+            <span className="font-mono text-[11px] text-muted">
+              Kompartemen Peran: Logistik · Komando · Forensik
             </span>
           </div>
 
-          <h1
-            className="max-w-4xl text-[34px] font-semibold leading-[1.06] tracking-[-0.04em] animate-fade-up sm:text-6xl sm:leading-[0.98] md:text-[80px]"
-            style={{ animationDelay: "80ms" }}
-          >
-            End-to-End Physical-to-Cyber
-            <br />
-            <span className="bg-gradient-to-b from-paper to-paper/40 bg-clip-text text-transparent">Asset Integrity.</span>
-          </h1>
+          <div className="mt-2 border-t border-line-strong">
+            {DOCTRINE_LEDGER.map((row) => (
+              <article
+                key={row.numeral}
+                className="group grid grid-cols-1 gap-3 border-b border-line py-5 transition-colors hover:bg-surface/65 sm:px-3 md:grid-cols-12 md:items-baseline md:gap-6 md:py-6"
+              >
+                <div className="flex items-baseline gap-3 md:col-span-2">
+                  <span className="font-display text-2xl italic text-brass md:text-3xl">
+                    {row.numeral}.
+                  </span>
+                  <span className="font-mono text-[11px] text-muted">
+                    {row.code}
+                  </span>
+                </div>
 
-          <p className="max-w-2xl text-[15px] leading-relaxed text-muted animate-fade-up sm:text-base md:text-lg" style={{ animationDelay: "160ms" }}>
-            Three phases, one chain of custody. <span className="text-paper">Supply-Chain Gatekeeper</span> seals every asset before deployment,{" "}
-            <span className="text-paper">QR Maintenance SIEM</span> binds physical access to cyber events, and{" "}
-            <span className="text-paper">AI Digital Forensics</span> reconstructs every incident automatically.
-          </p>
+                <div className="md:col-span-3">
+                  <h3 className="font-display text-[19px] font-medium leading-snug text-paper">
+                    {row.title}
+                  </h3>
+                  <span className="mt-1 inline-block font-mono text-[10.5px] text-subtle">
+                    Otoritas: {row.unit}
+                  </span>
+                </div>
 
-          <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center animate-fade-up" style={{ animationDelay: "240ms" }}>
-            <Button id="hero-google-oauth" variant="primary" size="lg" className="w-full sm:w-auto" onClick={handleGoogleSignInClick} loading={pending === "google"} icon={<Icon.Google size={16} />}>
-              Masuk dengan Akun Google
-            </Button>
-            <Button
-              id="hero-register-new"
-              variant="outline"
-              size="lg"
-              className="w-full px-4 text-xs sm:w-auto sm:px-6 sm:text-sm"
-              onClick={() => router.push("/onboarding")}
-              icon={<Icon.Arrow size={14} />}
-            >
-              ⚡ Daftar Personel Baru (Isi No. Pasukan)
-            </Button>
+                <p className="max-w-[62ch] text-[13.5px] leading-relaxed text-muted md:col-span-5">
+                  {row.summary}
+                </p>
+
+                <div className="flex items-center md:col-span-2 md:justify-end">
+                  <Tag tone="default">{row.artifact}</Tag>
+                </div>
+              </article>
+            ))}
           </div>
-
-          <p className="font-mono text-[10.5px] tracking-wide text-subtle animate-fade-up" style={{ animationDelay: "300ms" }}>
-            Otentikasi Zero-Trust: Akun Google wajib dilanjutkan dengan Nomor Pasukan / Sprint. Personel baru wajib diapprove Super Admin sebelum akses dibuka.
-          </p>
-        </div>
-
-        {/* Architecture strip */}
-        <div className="mt-16 grid grid-cols-1 border border-line bg-surface/70 backdrop-blur md:grid-cols-3">
-          {PHASES.map((p, i) => (
-            <article
-              key={p.no}
-              className="group relative flex flex-col gap-4 border-line p-6 transition-colors duration-300 hover:bg-paper hover:text-ink animate-fade-up md:border-l first:md:border-l-0 [&:not(:first-child)]:border-t md:[&:not(:first-child)]:border-t-0"
-              style={{ animationDelay: `${360 + i * 90}ms` }}
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-[11px] tracking-[0.2em] text-muted group-hover:text-ink/60">PHASE {p.no}</span>
-                <p.icon size={18} />
-              </div>
-              <h3 className="text-[17px] font-semibold tracking-tight">
-                {p.no}. {p.title}
-              </h3>
-              <p className="text-[13px] leading-relaxed text-muted group-hover:text-ink/70">{p.body}</p>
-              <Icon.Arrow size={14} className="mt-auto opacity-0 transition-all group-hover:translate-x-1 group-hover:opacity-100" />
-            </article>
-          ))}
-        </div>
+        </section>
       </main>
 
-      <footer className="relative z-10 flex flex-col items-center justify-between gap-2 border-t border-line px-6 py-4 font-mono text-[10.5px] tracking-[0.14em] text-subtle md:flex-row md:px-10">
-        <Eyebrow className="text-subtle">© OZIKRA · Air-Gapped Ready Architecture</Eyebrow>
-        <span>SHA-256 LEDGER · HMAC QR SEAL · SUMOPOD AI GATEWAY</span>
+      {/* Editorial Colophon Footer */}
+      <footer className="relative z-10 border-t border-line-strong bg-surface/75 px-4 py-5 sm:px-6 md:px-10">
+        <div className="mx-auto flex max-w-[1280px] flex-col items-start justify-between gap-3 text-xs text-muted sm:flex-row sm:items-center">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-brass">★</span>
+            <span className="font-display text-sm font-medium text-paper">
+              Kartika Eka Paksi
+            </span>
+            <span className="text-subtle">—</span>
+            <span>
+              Ozik-Sentinel · Pusat Siber TNI Angkatan Darat (Pussiberad)
+            </span>
+          </div>
+          <span className="font-mono text-[11px] text-subtle">
+            SHA-256 Ledger · Paspor QR HMAC · Air-Gapped Ready
+          </span>
+        </div>
       </footer>
 
-      {/* Post-Google Authentication Modal: Verifikasi Nomor Pasukan / Sprint */}
+      {/* Legacy Sprint Verification Modal */}
       {showAuthModal && selectedOfficer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md">
-          <div className="relative flex w-full max-w-lg flex-col border border-line-strong bg-ink p-6 shadow-2xl">
-            {/* Modal Header */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/85 p-4 backdrop-blur-md">
+          <div className="relative flex w-full max-w-lg flex-col border border-line-strong bg-surface p-6 shadow-2xl">
+            <span className="pointer-events-none absolute left-0 top-0 h-[2px] w-14 bg-brass" />
             <div className="flex items-center justify-between border-b border-line pb-4">
               <div className="flex items-center gap-2.5">
-                <Icon.Shield size={18} className="text-paper" />
+                <Icon.Shield size={18} className="text-brass" />
                 <div>
-                  <span className="font-mono text-xs font-bold tracking-wider text-paper block">
-                    {modalStep === "VERIFY_SPRINT" && "VERIFIKASI NOMOR PASUKAN / SPRINT // LANGKAH 2/2"}
-                    {modalStep === "PENDING_NOTICE" && "STATUS: PENDING SUPER ADMIN APPROVAL"}
+                  <span className="font-display text-base font-medium text-paper block">
+                    {modalStep === "VERIFY_SPRINT"
+                      ? "Verifikasi Nomor Pasukan / Sprin"
+                      : "Menunggu Persetujuan Markas Komando"}
                   </span>
-                  <span className="font-mono text-[10px] text-muted">
-                    {modalStep === "VERIFY_SPRINT" && "Otentikasi lapis kedua khusus perwira militer aktif setelah login Google"}
-                    {modalStep === "PENDING_NOTICE" && "Akses Command Console diblokir sampai disetujui"}
+                  <span className="font-mono text-[10.5px] text-muted">
+                    Otentikasi perwira siber TNI-AD
                   </span>
                 </div>
               </div>
@@ -333,54 +674,53 @@ export default function LandingPage() {
                 onClick={() => setShowAuthModal(false)}
                 className="font-mono text-xs text-muted hover:text-paper"
               >
-                [TUTUP / ESC]
+                [Tutup]
               </button>
             </div>
 
-            {/* STEP 2: VERIFIKASI NOMOR PASUKAN / SPRINT (UNTUK USER LAMA) */}
             {modalStep === "VERIFY_SPRINT" && (
-              <div className="flex flex-col gap-4 pt-3">
-                {/* Officer Google Verified Info */}
-                <div className="border border-line bg-surface-2 p-3.5 font-mono text-xs space-y-2">
-                  <div className="text-[10px] uppercase tracking-wider text-muted">
-                    Akun Google Terautentikasi:
+              <div className="flex flex-col gap-4 pt-4">
+                <div className="border border-line bg-surface-2 p-3.5 font-mono text-xs space-y-1.5">
+                  <div className="text-[10.5px] text-muted">
+                    Identitas Google Terverifikasi:
                   </div>
-                  <div className="font-bold text-paper text-sm">{selectedOfficer.name}</div>
-                  <div className="text-[11px] text-muted">{selectedOfficer.email}</div>
-                  <div className="flex items-center gap-2 pt-1">
-                    <span className="border border-line px-2 py-0.5 text-[9.5px] uppercase tracking-wider text-paper">
-                      {selectedOfficer.rank || "Perwira"}
-                    </span>
-                    <span className="border border-line px-2 py-0.5 text-[9.5px] uppercase tracking-wider text-paper">
-                      {selectedOfficer.role}
-                    </span>
-                    <span className="border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[9.5px] uppercase tracking-wider text-emerald-400">
-                      STATUS: APPROVED
-                    </span>
+                  <div className="font-semibold text-paper text-sm">
+                    {selectedOfficer.name}
+                  </div>
+                  <div className="text-[11px] text-muted">
+                    {selectedOfficer.email}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <Tag tone="muted">{selectedOfficer.rank || "Perwira"}</Tag>
+                    <Tag tone="brass">{selectedOfficer.role}</Tag>
+                    <Tag tone="default">Disetujui</Tag>
                   </div>
                 </div>
 
-                {/* Form Input Nomor Pasukan / Sprint */}
-                <form onSubmit={handleVerifySprintSubmit} className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <label className="font-mono text-[10.5px] uppercase tracking-wider text-paper font-semibold">
-                      Nomor Pasukan / Sprint (Surat Perintah):
+                <form
+                  onSubmit={handleVerifySprintSubmit}
+                  className="flex flex-col gap-3"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="text-xs font-medium text-muted">
+                      Nomor Pasukan / Sprin:
                     </label>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setSprintInput(selectedOfficer.nrp || "11050182740981")}
-                      className="text-[10.5px] border-paper/40 hover:bg-paper hover:text-ink"
+                      onClick={() =>
+                        setSprintInput(selectedOfficer.nrp || "11050182740981")
+                      }
                     >
-                      ⚡ Auto-Fill No. Pasukan ({selectedOfficer.nrp})
+                      ⚡ Isi Otomatis ({selectedOfficer.nrp})
                     </Button>
                   </div>
 
                   <Input
                     type="text"
-                    placeholder="Masukkan Nomor Pasukan / Sprint Anda"
-                    className="font-mono text-sm tracking-wider"
+                    placeholder="Masukkan Nomor Pasukan / Sprin Anda"
+                    className="font-mono text-sm"
                     value={sprintInput}
                     onChange={(e) => setSprintInput(e.target.value)}
                     required
@@ -388,15 +728,15 @@ export default function LandingPage() {
                   />
 
                   {sprintError && (
-                    <div className="flex items-center gap-2 border border-red-500/40 bg-red-950/40 p-2.5 font-mono text-[11px] text-red-200">
-                      <Icon.Alert size={14} className="text-red-400 shrink-0" />
+                    <div className="flex items-center gap-2 border border-crimson/60 bg-crimson/12 p-2.5 font-mono text-[11px] text-paper">
+                      <Icon.Alert size={14} className="text-crimson shrink-0" />
                       <span>{sprintError}</span>
                     </div>
                   )}
 
                   {sprintSuccessText && (
-                    <div className="flex items-center gap-2 border border-emerald-500/40 bg-emerald-950/40 p-2.5 font-mono text-[11px] text-emerald-200">
-                      <span className="h-1.5 w-1.5 animate-pulse bg-emerald-400" />
+                    <div className="flex items-center gap-2 border border-accent/60 bg-accent/12 p-2.5 font-mono text-[11px] text-paper">
+                      <span className="h-1.5 w-1.5 animate-pulse bg-accent" />
                       <span>{sprintSuccessText}</span>
                     </div>
                   )}
@@ -408,11 +748,10 @@ export default function LandingPage() {
                       size="md"
                       onClick={() => {
                         setShowAuthModal(false);
-                        signOut();
+                        void signOut();
                       }}
-                      className="text-xs text-muted"
                     >
-                      Keluar Akun Google
+                      Keluar
                     </Button>
                     <Button
                       type="submit"
@@ -423,49 +762,57 @@ export default function LandingPage() {
                       icon={<Icon.Arrow size={14} />}
                       className="flex-1 justify-center"
                     >
-                      Verifikasi &amp; Buka Command Console
+                      Verifikasi &amp; Buka Konsol
                     </Button>
                   </div>
                 </form>
               </div>
             )}
 
-            {/* PENDING APPROVAL NOTICE */}
             {modalStep === "PENDING_NOTICE" && (
-              <div className="flex flex-col gap-4 pt-3">
-                <div className="border border-yellow-500/40 bg-yellow-950/20 p-4 font-mono text-xs space-y-2">
-                  <div className="flex items-center gap-2 text-yellow-400 font-bold text-xs uppercase">
+              <div className="flex flex-col gap-4 pt-4">
+                <div className="border border-brass/50 bg-brass/10 p-4 font-mono text-xs space-y-2">
+                  <div className="flex items-center gap-2 text-brass font-semibold">
                     <Icon.Alert size={16} />
-                    PENDAFTARAN MENUNGGU PERSETUJUAN SUPER ADMIN
+                    Menunggu Persetujuan Super Admin
                   </div>
-                  <div className="border-t border-line/60 pt-2 space-y-1.5 text-muted">
-                    <div>Nama: <strong className="text-paper">{selectedOfficer.name}</strong></div>
-                    <div>Email Google: <strong className="text-paper">{selectedOfficer.email}</strong></div>
-                    <div>Nomor Pasukan / Sprint: <strong className="text-paper">{selectedOfficer.nrp}</strong></div>
-                    <div>Status Akun: <span className="border border-yellow-500/40 bg-yellow-500/10 px-2 py-0.5 text-yellow-400 text-[10px] font-bold">PENDING APPROVAL</span></div>
+                  <div className="border-t border-line pt-2 space-y-1 text-muted">
+                    <div>
+                      Nama:{" "}
+                      <strong className="text-paper">
+                        {selectedOfficer.name}
+                      </strong>
+                    </div>
+                    <div>
+                      Email:{" "}
+                      <strong className="text-paper">
+                        {selectedOfficer.email}
+                      </strong>
+                    </div>
+                    <div>
+                      NRP / Sprin:{" "}
+                      <strong className="text-paper">
+                        {selectedOfficer.nrp}
+                      </strong>
+                    </div>
                   </div>
                 </div>
 
-                <p className="text-xs leading-relaxed text-muted">
-                  Sesuai doktrin Zero-Trust PUSSIBERAD, akses Command Console Anda saat ini <strong className="text-red-400">DIBLOKIR</strong> sampai disetujui (Approved) secara resmi oleh Markas Komando / Super Admin.
-                </p>
-
                 {approvalStatusMsg && (
-                  <div className="flex items-center gap-2 border border-line bg-surface-2 p-3 font-mono text-xs text-paper">
-                    <span>{approvalStatusMsg}</span>
+                  <div className="border border-line bg-surface-2 p-3 font-mono text-xs text-paper">
+                    {approvalStatusMsg}
                   </div>
                 )}
 
-                <div className="flex flex-col gap-2 pt-1">
+                <div className="flex flex-col gap-2">
                   <Button
                     type="button"
                     variant="primary"
                     size="sm"
                     loading={checkingApproval}
                     onClick={handleCheckApprovalStatus}
-                    className="border-paper/40 text-[11px] justify-center"
                   >
-                    ⚡ Cek Status Persetujuan Real-Time
+                    Cek Status Persetujuan
                   </Button>
                   <Button
                     type="button"
@@ -477,29 +824,19 @@ export default function LandingPage() {
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
                           officer_id: selectedOfficer.id,
-                          approved_by: "Jenderal TNI (Purn) Okitr / Panglima Siber",
+                          approved_by: "Panglima Siber Pussiberad",
                         }),
                       });
                       if (res.ok) {
-                        setSelectedOfficer({ ...selectedOfficer, status: "APPROVED" });
+                        setSelectedOfficer({
+                          ...selectedOfficer,
+                          status: "APPROVED",
+                        });
                         setModalStep("VERIFY_SPRINT");
                       }
                     }}
-                    className="border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 text-[11px] justify-center"
                   >
-                    ⚡ Auto-Approve (Simulasi Super Admin)
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setShowAuthModal(false);
-                      signOut();
-                    }}
-                    className="text-[11px] justify-center text-muted"
-                  >
-                    Tutup / Keluar
+                    ⚡ Setujui Otomatis (Simulasi Super Admin)
                   </Button>
                 </div>
               </div>

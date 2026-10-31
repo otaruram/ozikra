@@ -3,14 +3,17 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { OzikLogo } from "@/components/brand/OzikLogo";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { Button, Tag } from "@/components/ui";
 import { generateVerifySealAutoFill } from "@/lib/autofill-generator";
 
 export default function VerifyPassportPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-white flex items-center justify-center font-mono text-xs text-zinc-600">
-          LOADING TACTICAL VERIFICATION GATEWAY...
+        <div className="flex min-h-screen items-center justify-center bg-ink font-mono text-xs text-muted">
+          Memuat gerbang verifikasi Paspor QR Pussiberad...
         </div>
       }
     >
@@ -29,6 +32,7 @@ function VerifyPassportContent() {
   const [isValid, setIsValid] = useState(true);
   const [isVerifying, setIsVerifying] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [verifyFeedback, setVerifyFeedback] = useState<string | null>(null);
 
   useEffect(() => {
     const id = searchParams.get("id");
@@ -41,9 +45,13 @@ function VerifyPassportContent() {
     if (sig) setSignature(sig);
     if (ts) setTimestamp(ts);
     if (vnd) setVendor(vnd);
-    if (status === "tampered" || status === "invalid" || status === "quarantined") {
+    if (
+      status === "tampered" ||
+      status === "invalid" ||
+      status === "quarantined"
+    ) {
       setIsValid(false);
-      setSecurityLevel("SECURITY BREACH / QUARANTINED");
+      setSecurityLevel("PELANGGARAN SEGEL / DIKARANTINA");
     } else if (status === "approved") {
       setIsValid(true);
       setSecurityLevel("Zero-Trust Encrypted");
@@ -58,7 +66,10 @@ function VerifyPassportContent() {
     setVendor(sample.vendor);
     const ok = sample.status === "approved";
     setIsValid(ok);
-    setSecurityLevel(ok ? "Zero-Trust Encrypted" : "SECURITY BREACH / QUARANTINED");
+    setVerifyFeedback(null);
+    setSecurityLevel(
+      ok ? "Zero-Trust Encrypted" : "PELANGGARAN SEGEL / DIKARANTINA",
+    );
   };
 
   const handleVerify = () => {
@@ -66,15 +77,15 @@ function VerifyPassportContent() {
     setTimeout(() => {
       setIsVerifying(false);
       if (isValid) {
-        alert(
-          "✓ VERIFIKASI BERHASIL:\nTanda tangan digital HMAC-SHA256 COCOK dengan master key PUSSIBERAD.\nStatus: SECURE / VERIFIED"
+        setVerifyFeedback(
+          "Verifikasi kriptografi sah: tanda tangan HMAC-SHA256 cocok dengan kunci induk Pussiberad TNI-AD.",
         );
       } else {
-        alert(
-          "⚠ PERINGATAN KEAMANAN SIBER:\nTanda tangan digital TIDAK COCOK atau segel fisik telah dimodifikasi!\nStatus: TAMPERED / UNAUTHORIZED"
+        setVerifyFeedback(
+          "Peringatan keamanan siber: tanda tangan digital tidak cocok atau segel fisik terindikasi dimodifikasi.",
         );
       }
-    }, 600);
+    }, 450);
   };
 
   const handleDownloadAudit = () => {
@@ -82,7 +93,7 @@ function VerifyPassportContent() {
       system: "OZIK-SENTINEL",
       gateway: "PUSSIBERAD Tactical Gatekeeper",
       domain: "oziksentinel.biz.id",
-      audit_version: "2.5.0-MIL",
+      audit_version: "2.6.0-KARTIKA",
       asset_id: assetId || "UNSET",
       vendor: vendor || "PT Len Industri",
       hmac_signature: signature || "UNSET",
@@ -101,7 +112,9 @@ function VerifyPassportContent() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `AUDIT_LOG_${assetId}_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `AUDIT_LOG_${assetId || "SEAL"}_${new Date()
+      .toISOString()
+      .slice(0, 10)}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -109,124 +122,101 @@ function VerifyPassportContent() {
   };
 
   const copySignature = () => {
+    if (!signature) return;
     navigator.clipboard.writeText(signature);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const toggleSimulate = () => {
+    setVerifyFeedback(null);
     setIsValid((prev) => {
       const next = !prev;
-      setSecurityLevel(next ? "Zero-Trust Encrypted" : "SECURITY BREACH DETECTED");
+      setSecurityLevel(
+        next ? "Zero-Trust Encrypted" : "PELANGGARAN SEGEL TERDETEKSI",
+      );
       return next;
     });
   };
 
   return (
-    <div className="min-h-screen bg-white text-zinc-950 font-sans antialiased selection:bg-zinc-950 selection:text-white pb-12">
-      {/* Top Tactical Banner */}
-      <header className="border-b-2 border-zinc-900 bg-zinc-950 text-white px-4 py-2.5">
-        <div className="max-w-2xl mx-auto flex items-center justify-between text-[11px] font-mono tracking-widest uppercase">
+    <div className="min-h-screen bg-ink text-paper pb-14">
+      {/* Top Classification Masthead */}
+      <header className="border-b border-line-strong bg-surface px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-2xl items-center justify-between gap-2">
+          <OzikLogo size={24} />
           <div className="flex items-center gap-2">
-            <span
-              className={`inline-block w-2 h-2 rounded-full ${
-                isValid ? "bg-emerald-600 animate-pulse" : "bg-red-600 animate-ping"
-              }`}
-            />
-            <span className="font-bold">PUSSIBERAD · TACTICAL GATEKEEPER</span>
-          </div>
-          <div className="text-zinc-400 text-[10px] hidden sm:block">
-            MIL-SPEC RFC-2104 · ZERO-TRUST
+            <span className="hidden font-mono text-[10.5px] text-muted sm:inline">
+              RFC-2104 · Validator Lapangan
+            </span>
+            <ThemeToggle id="verify-theme-toggle" />
           </div>
         </div>
       </header>
 
-      {/* Main Container */}
-      <main className="max-w-2xl mx-auto px-4 pt-6 sm:pt-8">
-        <div className="border-2 border-zinc-900 bg-white p-5 sm:p-7 shadow-[4px_4px_0px_0px_rgba(24,24,27,1)] relative">
-          {/* Tactical Crosshair Corners */}
-          <span className="absolute -top-[2px] -left-[2px] w-3 h-3 border-t-2 border-l-2 border-zinc-900" />
-          <span className="absolute -top-[2px] -right-[2px] w-3 h-3 border-t-2 border-r-2 border-zinc-900" />
-          <span className="absolute -bottom-[2px] -left-[2px] w-3 h-3 border-b-2 border-l-2 border-zinc-900" />
-          <span className="absolute -bottom-[2px] -right-[2px] w-3 h-3 border-b-2 border-r-2 border-zinc-900" />
+      {/* Main Certificate Dossier */}
+      <main className="mx-auto max-w-2xl px-4 pt-6 sm:pt-9">
+        <section className="relative border border-line-strong bg-surface p-5 shadow-xl sm:p-7">
+          <span className="pointer-events-none absolute left-0 top-0 h-[3px] w-16 bg-brass" />
 
-          {/* 1. Header / Status Bar */}
-          <div className="border-b-2 border-zinc-900 pb-5 mb-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          {/* 1. Certificate Masthead */}
+          <div className="border-b border-line-strong pb-5 mb-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-500">
-                  AUTHENTICATION GATEWAY // OZIKSENTINEL.BIZ.ID
+                <div className="font-mono text-[11px] text-brass">
+                  ★ Sertifikat Keaslian Alutsista · oziksentinel.biz.id
                 </div>
-                <h1 className="text-lg sm:text-xl font-bold uppercase tracking-tight text-zinc-950 mt-0.5">
-                  Tactical QR Passport Verification
+                <h1 className="font-display mt-1 text-2xl font-medium tracking-[-0.02em] text-paper sm:text-[28px]">
+                  Verifikasi Paspor QR Kriptografi
                 </h1>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={handleAutoFillVerify}
-                  className="border-2 border-zinc-900 bg-zinc-100 hover:bg-zinc-900 hover:text-white px-2.5 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
                 >
-                  ⚡ Auto-Fill Sample QR Seal
-                </button>
-                {/* Dynamic Badge */}
-                <div
-                  className={`inline-flex items-center gap-2 border-2 px-3.5 py-1.5 self-start sm:self-center transition-colors ${
-                    !assetId
-                      ? "border-zinc-500 bg-zinc-100 text-zinc-700"
-                      : isValid
-                      ? "border-emerald-700 bg-emerald-50 text-emerald-900"
-                      : "border-red-600 bg-red-50 text-red-900"
-                  }`}
-                >
-                  <span
-                    className={`w-2.5 h-2.5 rounded-full ${
-                      !assetId
-                        ? "bg-zinc-500"
-                        : isValid
-                        ? "bg-emerald-600"
-                        : "bg-red-600 animate-ping"
-                    }`}
-                  />
-                  <span className="font-mono text-xs font-bold uppercase tracking-wider">
-                    {!assetId
-                      ? "AWAITING QR SCAN / AUTO-FILL"
-                      : isValid
-                      ? "SECURE / VERIFIED"
-                      : "WARNING: UNVERIFIED / TAMPERED"}
-                  </span>
-                </div>
+                  ⚡ Contoh Segel QR
+                </Button>
+                {!assetId ? (
+                  <Tag tone="muted">Menunggu Pemindaian</Tag>
+                ) : isValid ? (
+                  <Tag tone="default">● Segel Sah &amp; Utuh</Tag>
+                ) : (
+                  <Tag tone="alert">▲ Segel Rusak / Anomali</Tag>
+                )}
               </div>
             </div>
 
-            <div className="mt-3 flex items-center justify-between text-[11px] font-mono text-zinc-500">
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] text-muted">
               <span>
-                INSTANSI:{" "}
-                <strong className="text-zinc-950">
-                  PUSAT SIBER TNI ANGKATAN DARAT
+                Otoritas:{" "}
+                <strong className="font-medium text-paper">
+                  Pusat Siber TNI Angkatan Darat (Pussiberad)
                 </strong>
               </span>
-              <span className="hidden sm:inline">
-                SECURITY LEVEL:{" "}
-                <strong className="text-zinc-950">TOP-SECRET / MIL</strong>
+              <span>
+                Klasifikasi:{" "}
+                <strong className="font-medium text-brass">
+                  Mil-Spec 810H
+                </strong>
               </span>
             </div>
           </div>
 
-          {/* 2. QR & Asset Details */}
-          <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-6 items-start mb-6">
-            {/* Tactical QR Representation */}
+          {/* 2. QR Stamp & Technical Fields */}
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-[152px_1fr] items-start mb-6">
             <div className="flex flex-col items-center">
-              <div className="border-2 border-zinc-900 p-2 bg-white relative w-full aspect-square max-w-[160px] flex items-center justify-center">
+              <div className="flex aspect-square w-full max-w-[152px] items-center justify-center border border-line-strong bg-paper p-2.5 text-ink">
                 <svg
-                  className="w-full h-full text-zinc-950"
+                  className="h-full w-full"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="1.8"
                   strokeLinecap="square"
-                  strokeLinejoin="miter"
                 >
                   <rect x="3" y="3" width="7" height="7" />
                   <rect x="5" y="5" width="3" height="3" fill="currentColor" />
@@ -242,57 +232,56 @@ function VerifyPassportContent() {
                   <path d="M7 10v4" />
                 </svg>
               </div>
-              <span className="font-mono text-[9px] uppercase tracking-wider text-zinc-500 mt-2 text-center">
-                TACTICAL SEAL STAMP
+              <span className="mt-2 font-mono text-[10px] text-subtle text-center">
+                Cap Kriptografi Lapangan
               </span>
             </div>
 
-            {/* Asset Metadata (Monospace) */}
-            <div className="space-y-3.5 font-mono text-xs">
-              <div className="border border-zinc-900 p-2.5 bg-zinc-50">
-                <span className="block text-[10px] text-zinc-500 tracking-wider uppercase mb-0.5 font-sans font-semibold">
-                  ASSET ID
+            <div className="space-y-3 text-xs">
+              <div className="border border-line bg-surface-2/60 p-3">
+                <span className="block text-[11px] font-medium text-muted mb-0.5">
+                  Identitas Aset (Asset ID)
                 </span>
-                <span className="font-bold text-sm tracking-tight text-zinc-950">
-                  {assetId || "— (Scan QR atau klik ⚡ Auto-Fill Sample QR Seal)"}
+                <span className="font-mono text-sm font-semibold text-paper break-all">
+                  {assetId || "— (Pindai stiker QR atau klik ⚡ Contoh Segel QR)"}
                 </span>
               </div>
 
-              <div className="border border-zinc-900 p-2.5 bg-zinc-50">
+              <div className="border border-line bg-surface-2/60 p-3">
                 <div className="flex items-center justify-between mb-0.5">
-                  <span className="text-[10px] text-zinc-500 tracking-wider uppercase font-sans font-semibold">
-                    HMAC-SHA256 SIGNATURE
+                  <span className="text-[11px] font-medium text-muted">
+                    Tanda Tangan Digital HMAC-SHA256
                   </span>
                   <button
                     onClick={copySignature}
                     disabled={!signature}
-                    className="text-[10px] uppercase underline text-zinc-950 hover:text-emerald-700 transition-colors disabled:opacity-40"
+                    className="cursor-pointer font-mono text-[10.5px] text-brass underline disabled:opacity-40"
                   >
-                    {copied ? "Copied!" : "Copy"}
+                    {copied ? "Tersalin" : "Salin"}
                   </button>
                 </div>
-                <span className="break-all text-[11px] font-semibold text-zinc-800 leading-relaxed block">
+                <span className="block font-mono text-[11px] leading-relaxed text-paper break-all">
                   {signature || "—"}
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="border border-zinc-900 p-2.5 bg-zinc-50">
-                  <span className="block text-[10px] text-zinc-500 tracking-wider uppercase mb-0.5 font-sans font-semibold">
-                    ISSUED TIMESTAMP
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="border border-line bg-surface-2/60 p-3">
+                  <span className="block text-[11px] font-medium text-muted mb-0.5">
+                    Waktu Penerbitan Segel
                   </span>
-                  <span className="font-semibold text-[11.5px] text-zinc-950">
+                  <span className="font-mono text-[11.5px] text-paper">
                     {timestamp || "—"}
                   </span>
                 </div>
 
-                <div className="border border-zinc-900 p-2.5 bg-zinc-50">
-                  <span className="block text-[10px] text-zinc-500 tracking-wider uppercase mb-0.5 font-sans font-semibold">
-                    SECURITY LEVEL
+                <div className="border border-line bg-surface-2/60 p-3">
+                  <span className="block text-[11px] font-medium text-muted mb-0.5">
+                    Status Keamanan
                   </span>
                   <span
-                    className={`font-bold text-[11.5px] ${
-                      isValid ? "text-emerald-700" : "text-red-700"
+                    className={`font-mono text-[11.5px] font-semibold ${
+                      isValid ? "text-accent" : "text-crimson"
                     }`}
                   >
                     {securityLevel}
@@ -302,96 +291,87 @@ function VerifyPassportContent() {
             </div>
           </div>
 
-          {/* 3. Verification Report */}
-          <div className="border-2 border-zinc-900 p-3.5 bg-zinc-50 mb-6 font-mono text-[11.5px]">
+          {/* 3. Cryptographic Verdict Box */}
+          <div
+            className={`mb-5 border p-4 ${
+              isValid
+                ? "border-accent/45 bg-accent/10"
+                : "border-crimson/60 bg-crimson/10"
+            }`}
+          >
             <div className="flex items-center gap-2 mb-1">
               <span
-                className={`w-2 h-2 inline-block ${
-                  isValid ? "bg-emerald-600" : "bg-red-600"
+                className={`inline-block h-2 w-2 rounded-full ${
+                  isValid ? "bg-accent" : "bg-crimson"
                 }`}
               />
               <strong
-                className={`uppercase tracking-wider text-xs ${
-                  isValid ? "text-zinc-950" : "text-red-700 font-bold"
+                className={`font-mono text-xs ${
+                  isValid ? "text-accent" : "text-crimson"
                 }`}
               >
                 {isValid
-                  ? "CRYPTOGRAPHIC DIGEST MATCH: VALID"
-                  : "CRYPTOGRAPHIC SIGNATURE MISMATCH: TAMPERED!"}
+                  ? "Kecocokan Digest Kriptografi: Sah & Terverifikasi"
+                  : "Ketidakcocokan Tanda Tangan: Terindikasi Tampering"}
               </strong>
             </div>
-            <p className="text-zinc-600 font-sans text-xs leading-relaxed">
+            <p className="text-xs leading-relaxed text-muted">
               {isValid
-                ? "Tanda tangan digital HMAC-SHA256 telah diverifikasi terhadap master key PUSSIBERAD. Integritas firmware, nomor seri fisik, dan manifest alutsista dinyatakan otentik dan belum dimodifikasi."
-                : "PERINGATAN! Hash tanda tangan digital tidak cocok dengan registri PUSSIBERAD. Ada indikasi alutsista mengalami serangan fisik, tampering firmware backdoor, atau sertifikat palsu."}
+                ? "Tanda tangan HMAC-SHA256 sesuai dengan kunci induk Pussiberad. Integritas firmware, nomor seri fisik, serta manifest pengadaan alutsista dinyatakan otentik."
+                : "Peringatan: hash tanda tangan tidak sesuai dengan registri Pussiberad. Perangkat berpotensi mengalami modifikasi fisik tanpa izin atau pemalsuan stiker."}
             </p>
+            {verifyFeedback && (
+              <div className="mt-2.5 border-t border-line pt-2 font-mono text-[11px] text-paper">
+                {verifyFeedback}
+              </div>
+            )}
           </div>
 
-          {/* 4. Action Buttons */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <button
+          {/* 4. Actions */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Button
+              type="button"
+              variant="primary"
+              size="lg"
+              loading={isVerifying}
               onClick={handleVerify}
-              disabled={isVerifying}
-              className="flex items-center justify-center gap-2 border-2 border-zinc-900 bg-zinc-950 text-white hover:bg-zinc-800 active:translate-y-0.5 px-4 py-3 font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-[2px_2px_0px_0px_rgba(24,24,27,1)] disabled:opacity-60"
+              className="w-full justify-center"
             >
-              <svg
-                className="w-4 h-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-              >
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                <path d="m9 12 2 2 4-4" />
-              </svg>
-              <span>
-                {isVerifying ? "Verifying Digest..." : "Verify Digital Seal"}
-              </span>
-            </button>
-
-            <button
+              Verifikasi Segel Digital
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
               onClick={handleDownloadAudit}
-              className="flex items-center justify-center gap-2 border-2 border-zinc-900 bg-white text-zinc-950 hover:bg-zinc-100 active:translate-y-0.5 px-4 py-3 font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-[2px_2px_0px_0px_rgba(24,24,27,1)]"
+              className="w-full justify-center"
             >
-              <svg
-                className="w-4 h-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              <span>Download Audit Log</span>
-            </button>
+              Unduh Bukti Audit (.json)
+            </Button>
           </div>
 
-          {/* Simulation Toggle & Navigation Links */}
-          <div className="mt-5 pt-4 border-t border-dashed border-zinc-300 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] font-mono text-zinc-500">
+          {/* Footer Controls */}
+          <div className="mt-5 flex flex-col items-center justify-between gap-2 border-t border-dashed border-line pt-4 font-mono text-[11px] text-muted sm:flex-row">
             <button
               onClick={toggleSimulate}
-              className="uppercase font-bold underline hover:text-red-700 transition-colors"
+              className="cursor-pointer text-brass underline-offset-4 hover:underline"
             >
               {isValid
-                ? "[Simulasikan Tampered / Invalid]"
-                : "[Pulihkan ke Valid / Verified]"}
+                ? "Uji Skenario Segel Rusak (Tampered)"
+                : "Pulihkan Status ke Segel Sah"}
             </button>
             <Link
               href="/dashboard/gatekeeper"
-              className="uppercase underline hover:text-zinc-950 transition-colors"
+              className="text-paper underline-offset-4 hover:underline"
             >
-              Kembali ke Gatekeeper Dashboard →
+              Buka Konsol Gatekeeper →
             </Link>
           </div>
-        </div>
+        </section>
 
-        {/* Footer */}
-        <footer className="mt-6 text-center font-mono text-[10px] uppercase tracking-widest text-zinc-500">
-          Pusat Siber TNI AD (PUSSIBERAD) · OZIK-SENTINEL Zero-Trust Ecosystem
-          <br />
-          Tanda Tangan Kriptografi Dilindungi Undang-Undang ITE & Doktrin Operasi Siber TNI
+        <footer className="mt-6 text-center font-mono text-[10.5px] leading-relaxed text-subtle">
+          Pusat Siber TNI Angkatan Darat (Pussiberad) · Kartika Cyber Hackathon
+          2026
         </footer>
       </main>
     </div>

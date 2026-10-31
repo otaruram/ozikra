@@ -229,13 +229,13 @@ export default function OnboardingPage() {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-paper/40 to-transparent" />
 
       {/* Top Bar */}
-      <header className="relative z-10 flex items-center justify-between gap-2 border-b border-line px-4 py-3.5 sm:px-6 md:px-10 md:py-4">
+      <header className="relative z-10 flex items-center justify-between gap-2 border-b border-line-strong bg-surface/85 backdrop-blur-md px-4 py-3.5 sm:px-6 md:px-10 md:py-4">
         <OzikLogo size={26} />
         <div className="flex items-center gap-2 sm:gap-3">
-          <span className="flex items-center gap-1.5 border border-line bg-surface/80 px-2 py-1 font-mono text-[9.5px] uppercase tracking-[0.12em] text-paper sm:gap-2 sm:px-2.5 sm:text-[10.5px] sm:tracking-[0.15em]">
-            <span className="h-1.5 w-1.5 shrink-0 animate-pulse bg-emerald-400" />
-            <span className="hidden sm:inline">PostgreSQL &amp; Prisma Active</span>
-            <span className="sm:hidden">DB ACTIVE</span>
+          <span className="flex items-center gap-1.5 border border-line bg-surface-2/80 px-2.5 py-1 font-mono text-[10.5px] text-paper">
+            <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-accent" />
+            <span className="hidden sm:inline">Basis Data PostgreSQL Aktif</span>
+            <span className="sm:hidden">DB Aktif</span>
           </span>
           <ThemeToggle id="onboarding-theme-toggle" />
         </div>
@@ -352,18 +352,16 @@ export default function OnboardingPage() {
           </div>
         ) : (
           <div>
-            <div className="mb-8">
-              <div className="mb-2.5 flex flex-wrap items-center gap-2">
-                <Tag tone="muted" className="whitespace-normal break-words text-[9.5px] sm:whitespace-nowrap sm:text-[10px]">
-                  PUSSIBERAD · PROTOKOL REGISTRASI PERSONEL
-                </Tag>
-                <span className="font-mono text-[10px] text-muted sm:text-[10.5px]">MIL-SPEC RBAC 2026</span>
+            <div className="mb-8 border-b border-line-strong pb-5">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <Tag tone="brass">★ Pussiberad · Protokol Registrasi Personel</Tag>
+                <span className="font-mono text-[11px] text-muted">Kartika RBAC 2026</span>
               </div>
-              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl md:text-4xl">
+              <h1 className="font-display text-3xl font-medium tracking-[-0.02em] text-paper sm:text-4xl">
                 Aktivasi Kredensial Personel Militer
               </h1>
-              <p className="mt-2 text-sm text-muted">
-                Akun Google Anda berhasil diautentikasi. Lengkapi formulir pendaftaran resmi di bawah ini. Formulir akan dikirimkan ke Super Admin untuk persetujuan (approval) sebelum hak akses console aktif.
+              <p className="mt-2 max-w-[64ch] text-sm leading-relaxed text-muted">
+                Lengkapi berkas penugasan resmi di bawah ini atau gunakan tombol prasetel cepat untuk langsung membuka Konsol Komando pada ruang kerja terisolasi Anda.
               </p>
             </div>
 
@@ -537,15 +535,15 @@ export default function OnboardingPage() {
                   <div
                     key={role.id}
                     onClick={() => setSelectedRole(role.id)}
-                    className={`relative cursor-pointer border p-4.5 transition-all duration-150 ${
+                    className={`relative cursor-pointer border p-4.5 transition-[border-color,background-color] duration-150 ${
                       isSelected
-                        ? "border-paper bg-surface-2 shadow-[0_0_20px_rgba(255,255,255,0.06)]"
-                        : "border-line bg-surface/40 hover:border-line-strong hover:bg-surface/70"
+                        ? "border-accent bg-accent/10"
+                        : "border-line bg-surface/60 hover:border-brass hover:bg-surface-2/60"
                     }`}
                   >
                     {isSelected && (
-                      <div className="absolute -top-2.5 right-3 border border-paper bg-ink px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider text-paper">
-                        TERPILIH
+                      <div className="absolute -top-2.5 right-3 border border-accent bg-accent px-2 py-0.5 font-mono text-[9.5px] font-semibold text-accent-ink">
+                        Terpilih
                       </div>
                     )}
 
@@ -553,17 +551,17 @@ export default function OnboardingPage() {
                       <div
                         className={`flex h-8 w-8 items-center justify-center border ${
                           isSelected
-                            ? "border-paper bg-paper text-ink"
-                            : "border-line bg-surface text-muted"
+                            ? "border-accent bg-accent text-accent-ink"
+                            : "border-line-strong bg-surface text-brass"
                         }`}
                       >
                         <IconComponent size={16} />
                       </div>
                       <div>
-                        <div className="font-mono text-[10px] uppercase tracking-wider text-muted">
+                        <div className="font-mono text-[10.5px] text-brass">
                           {role.badge}
                         </div>
-                        <h3 className="text-sm font-semibold text-paper">{role.title}</h3>
+                        <h3 className="font-display text-base font-medium text-paper">{role.title}</h3>
                       </div>
                     </div>
 

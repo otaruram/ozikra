@@ -6,10 +6,14 @@ interface LogoProps {
   size?: number;
 }
 
-export const OzikLogo: React.FC<LogoProps> = ({ className = "", showText = true, size = 28 }) => {
+export const OzikLogo: React.FC<LogoProps> = ({
+  className = "",
+  showText = true,
+  size = 28,
+}) => {
   return (
-    <div className={`flex items-center gap-2.5 font-mono ${className}`}>
-      {/* Tactical Shield & Circuit Vector Icon */}
+    <div className={`flex items-center gap-2.5 select-none ${className}`}>
+      {/* Kartika Eka Paksi Star & Tactical Hexagonal Shield Emblem */}
       <svg
         width={size}
         height={size}
@@ -18,36 +22,37 @@ export const OzikLogo: React.FC<LogoProps> = ({ className = "", showText = true,
         xmlns="http://www.w3.org/2000/svg"
         className="shrink-0"
       >
-        {/* Outer Tactical Hex Shield */}
+        {/* Outer Tactical Defense Shield */}
         <polygon
-          points="16,2 29,8 29,20 16,30 3,20 3,8"
-          className="stroke-zinc-900 dark:stroke-zinc-100"
-          strokeWidth="2"
+          points="16,2 28.5,8.2 28.5,20.2 16,30 3.5,20.2 3.5,8.2"
+          stroke="var(--accent)"
+          strokeWidth="1.75"
+          fill="var(--surface-2)"
+        />
+        {/* Inner Dossier Perimeter */}
+        <polygon
+          points="16,5.2 25.5,10 25.5,19 16,26.6 6.5,19 6.5,10"
+          stroke="var(--line-strong)"
+          strokeWidth="1"
           fill="none"
         />
-        {/* Inner Radar Crosshair / Circuit Core */}
-        <circle
-          cx="16"
-          cy="16"
-          r="6"
-          className="stroke-zinc-900 dark:stroke-zinc-100"
-          strokeWidth="1.5"
-          strokeDasharray="3 2"
+        {/* Kartika 5-Pointed Brass Insignia Star */}
+        <polygon
+          points="16,8.8 17.85,13.4 22.8,13.75 19,16.95 20.2,21.8 16,19.15 11.8,21.8 13,16.95 9.2,13.75 14.15,13.4"
+          fill="var(--brass)"
         />
-        <circle cx="16" cy="16" r="2" className="fill-zinc-900 dark:fill-zinc-100" />
-        <line x1="16" y1="6" x2="16" y2="10" className="stroke-zinc-900 dark:stroke-zinc-100" strokeWidth="1.5" />
-        <line x1="16" y1="22" x2="16" y2="26" className="stroke-zinc-900 dark:stroke-zinc-100" strokeWidth="1.5" />
-        <line x1="6" y1="16" x2="10" y2="16" className="stroke-zinc-900 dark:stroke-zinc-100" strokeWidth="1.5" />
-        <line x1="22" y1="16" x2="26" y2="16" className="stroke-zinc-900 dark:stroke-zinc-100" strokeWidth="1.5" />
       </svg>
 
       {showText && (
-        <div className="flex flex-col leading-none select-none">
-          <span className="text-sm font-black tracking-wider uppercase text-zinc-900 dark:text-zinc-100">
-            OZIK-SENTINEL
-          </span>
-          <span className="text-[9px] font-semibold tracking-widest text-zinc-500 uppercase">
-            // CORE INFRA PUSSIBERAD
+        <div className="flex flex-col leading-none">
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-display text-[17px] font-semibold tracking-[-0.02em] text-paper">
+              Ozik-Sentinel
+            </span>
+            <span className="hidden h-1.5 w-1.5 rounded-full bg-accent sm:inline-block" />
+          </div>
+          <span className="mt-0.5 font-mono text-[9.5px] tracking-[0.06em] text-muted">
+            Pussiberad · Kartika TNI-AD
           </span>
         </div>
       )}
