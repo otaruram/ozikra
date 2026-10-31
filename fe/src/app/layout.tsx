@@ -33,12 +33,12 @@ export const metadata: Metadata = {
     "Sistem Integritas Rantai Pasok Alutsista IT/OT, Paspor QR Kriptografi & SIEM Ringan — Pusat Siber TNI Angkatan Darat (PUSSIBERAD).",
   icons: {
     icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/favicon.png", type: "image/png" },
-      { url: "/favicon.ico" },
+      { url: "/icon.svg?v=kartika2026", type: "image/svg+xml" },
+      { url: "/favicon.png?v=kartika2026", type: "image/png", sizes: "64x64" },
+      { url: "/favicon.ico?v=kartika2026", sizes: "32x32" },
     ],
-    shortcut: "/favicon.png",
-    apple: "/apple-touch-icon.png",
+    shortcut: "/favicon.png?v=kartika2026",
+    apple: "/apple-touch-icon.png?v=kartika2026",
   },
 };
 

@@ -18,30 +18,21 @@ export const Icon = {
     <svg
       width={size}
       height={size}
-      viewBox="0 0 32 32"
+      viewBox="0 0 64 64"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       {...p}
     >
-      <polygon
-        points="16,2 29,8 29,20 16,30 3,20 3,8"
+      <path
+        d="M32 6 L55 15.5 V33.5 C55 46.5 45.2 55.2 32 59 C18.8 55.2 9 46.5 9 33.5 V15.5 L32 6 Z"
         stroke="currentColor"
-        strokeWidth="2"
+        strokeWidth="3.2"
         fill="none"
       />
-      <circle
-        cx="16"
-        cy="16"
-        r="6"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeDasharray="3 2"
+      <polygon
+        points="32,14 36.8,25.4 49,26.2 39.5,34.1 42.6,46 32,39.4 21.4,46 24.5,34.1 15,26.2 27.2,25.4"
+        fill="var(--brass)"
       />
-      <circle cx="16" cy="16" r="2" fill="currentColor" />
-      <line x1="16" y1="6" x2="16" y2="10" stroke="currentColor" strokeWidth="1.5" />
-      <line x1="16" y1="22" x2="16" y2="26" stroke="currentColor" strokeWidth="1.5" />
-      <line x1="6" y1="16" x2="10" y2="16" stroke="currentColor" strokeWidth="1.5" />
-      <line x1="22" y1="16" x2="26" y2="16" stroke="currentColor" strokeWidth="1.5" />
     </svg>
   ),
   Command: ({ size, ...p }: IconProps) => (

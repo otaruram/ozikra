@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "nodejs";
-export const size = { width: 32, height: 32 };
+export const size = { width: 64, height: 64 };
 export const contentType = "image/png";
 
 export default function Icon() {
@@ -11,36 +11,53 @@ export default function Icon() {
         style={{
           width: "100%",
           height: "100%",
-          background: "#111913",
+          background: "#0b140e",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          borderRadius: "4px",
-          border: "1px solid #2b3c2f",
+          borderRadius: "14px",
+          border: "2px solid #294231",
         }}
       >
         <svg
-          width="26"
-          height="26"
-          viewBox="0 0 32 32"
+          width="58"
+          height="58"
+          viewBox="0 0 64 64"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
-          {/* Outer Kartika Hexagonal Defense Shield */}
-          <polygon
-            points="16,2 28.5,8.5 28.5,21 16,30 3.5,21 3.5,8.5"
-            stroke="#59ba82"
-            strokeWidth="2"
+          {/* Outer Kartika Cyber Defense Shield */}
+          <path
+            d="M32 6 L55 15.5 V33.5 C55 46.5 45.2 55.2 32 59 C18.8 55.2 9 46.5 9 33.5 V15.5 L32 6 Z"
+            fill="#14261a"
+            stroke="#e2bc5a"
+            strokeWidth="3.2"
+          />
+          {/* Inner Tactical Cyber Emerald Perimeter */}
+          <path
+            d="M32 10.5 L50.5 18.2 V33 C50.5 43.4 42.6 50.6 32 54 C21.4 50.6 13.5 43.4 13.5 33 V18.2 L32 10.5 Z"
             fill="none"
+            stroke="#59ba82"
+            strokeWidth="1.5"
+            strokeDasharray="5 2.5"
           />
-          {/* Inner Kartika Eka Paksi 5-Pointed Brass Star */}
+          <line x1="32" y1="11" x2="32" y2="16" stroke="#59ba82" strokeWidth="1.8" />
+          <line x1="32" y1="48" x2="32" y2="53" stroke="#59ba82" strokeWidth="1.8" />
+          <line x1="14" y1="32" x2="19" y2="32" stroke="#59ba82" strokeWidth="1.8" />
+          <line x1="45" y1="32" x2="50" y2="32" stroke="#59ba82" strokeWidth="1.8" />
+          {/* 5-Pointed Kartika Eka Paksi Gold Star */}
           <polygon
-            points="16,8.2 17.9,13.6 23.6,13.6 19,17 20.8,22.4 16,19 11.2,22.4 13,17 8.4,13.6 14.1,13.6"
-            fill="#d8b35c"
+            points="32,14.5 36.6,25.6 48.6,26.4 39.3,34.1 42.3,45.8 32,39.3 21.7,45.8 24.7,34.1 15.4,26.4 27.4,25.6"
+            fill="#f0c965"
+            stroke="#0b140e"
+            strokeWidth="1.2"
           />
+          {/* Cyber Core */}
+          <circle cx="32" cy="31.8" r="3.4" fill="#0d1a12" stroke="#59ba82" strokeWidth="1.6" />
+          <circle cx="32" cy="31.8" r="1.4" fill="#59ba82" />
         </svg>
       </div>
     ),
-    { ...size }
+    { ...size },
   );
 }
