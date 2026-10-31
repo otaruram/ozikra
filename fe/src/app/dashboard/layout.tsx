@@ -6,6 +6,9 @@ import { OzikLogo } from "@/components/brand/OzikLogo";
 import { Header } from "@/components/shell/header";
 import { Sidebar } from "@/components/shell/sidebar";
 import { ClearanceModal } from "@/components/shell/clearance-modal";
+import { RegistrationDispatchBanner } from "@/components/shell/registration-dispatch-banner";
+import { TacticalGuideTour } from "@/components/shell/tactical-guide-tour";
+import { cn } from "@/components/ui";
 import { useSession } from "@/lib/session-context";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -13,6 +16,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { session, isReady, clearanceApproved, refreshSessionFromStorage } =
     useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
 
   useEffect(() => {
     if (!isReady || session) return;
@@ -48,12 +52,19 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <Header onToggleSidebar={() => setSidebarOpen((v) => !v)} />
         <main className="relative flex-1 overflow-x-hidden">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-dots mask-fade-b opacity-55" />
-          <div className="relative mx-auto flex w-full max-w-[1400px] min-w-0 flex-col gap-5 px-3.5 py-5 sm:px-5 md:gap-6 md:px-8 md:py-8">
+          <div
+            className={cn(
+              "relative mx-auto flex w-full max-w-[1400px] min-w-0 flex-col gap-5 px-3.5 py-5 sm:px-5 md:gap-6 md:px-8 md:py-8",
+              guideOpen && "pb-56 sm:pb-20",
+            )}
+          >
+            <RegistrationDispatchBanner />
             {children}
           </div>
         </main>
       </div>
 
+      <TacticalGuideTour onVisibilityChange={setGuideOpen} />
       <ClearanceModal isOpen={!clearanceApproved} onSuccess={() => {}} />
     </div>
   );

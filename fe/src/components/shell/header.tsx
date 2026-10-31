@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
+import { openTacticalGuideTour } from "@/components/shell/tactical-guide-tour";
 import { cn, Tag } from "@/components/ui";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { canAccess, type RouteKey } from "@/lib/rbac";
@@ -113,6 +114,21 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
       </div>
 
       <div className="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
+        <button
+          id="header-open-guide"
+          type="button"
+          onClick={() => {
+            setRoleOpen(false);
+            setUserOpen(false);
+            openTacticalGuideTour();
+          }}
+          title="Buka Panduan Interaktif Konsol"
+          className="flex h-9 w-8 shrink-0 cursor-pointer items-center justify-center gap-1.5 border border-brass/50 bg-brass/10 font-mono text-[11px] font-semibold text-brass transition-colors hover:border-brass hover:bg-brass/20 sm:w-auto sm:px-2.5"
+        >
+          <span>?</span>
+          <span className="hidden sm:inline">Panduan</span>
+        </button>
+
         <ThemeToggle id="header-theme-toggle" />
 
         {/* Switch Role Simulator (static on mobile so dropdown spans full header width with safe inset) */}
@@ -124,7 +140,7 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
               setUserOpen(false);
               setRoleOpen((v) => !v);
             }}
-            className="flex h-9 max-w-[185px] cursor-pointer items-center gap-1.5 border border-line-strong bg-surface/80 px-2 transition-colors hover:border-brass disabled:opacity-60 sm:max-w-none sm:gap-2 sm:px-3"
+            className="flex h-9 max-w-[155px] cursor-pointer items-center gap-1.5 border border-line-strong bg-surface/80 px-2 transition-colors hover:border-brass disabled:opacity-60 sm:max-w-none sm:gap-2 sm:px-3"
           >
             {isSwitching ? (
               <>
@@ -136,7 +152,7 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
             ) : (
               <>
                 <span className="hidden text-xs text-muted sm:inline">Peran:</span>
-                <Tag tone="brass" className="max-w-[138px] truncate sm:max-w-none">
+                <Tag tone="brass" className="max-w-[116px] truncate sm:max-w-none">
                   {ROLE_LABEL[role]}
                 </Tag>
                 <Icon.Chevron
@@ -264,6 +280,16 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
                 <span className="text-xs text-muted">Tampilan Material</span>
                 <ThemeToggle showLabel />
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setUserOpen(false);
+                  openTacticalGuideTour();
+                }}
+                className="flex w-full cursor-pointer items-center gap-2.5 border-b border-line px-4 py-2.5 text-left text-[13px] text-brass transition-colors hover:bg-surface-2 hover:text-paper"
+              >
+                <span className="font-mono text-xs font-bold">★</span> Panduan Interaktif Konsol
+              </button>
               <button
                 onClick={() => {
                   setUserOpen(false);

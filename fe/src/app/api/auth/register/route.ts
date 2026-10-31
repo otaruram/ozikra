@@ -45,6 +45,11 @@ export async function POST(request: Request) {
     console.warn("[AUTH-REGISTER] Go backend unreachable, falling back to direct Supabase Cloud persistence:", backendErr);
   }
 
+  const requestedStatus =
+    typeof body.status === "string" && body.status.toUpperCase() === "PENDING"
+      ? "PENDING"
+      : "APPROVED";
+
   // 2. Direct Supabase Cloud Fallback Persistence (only if env vars configured)
   if (SUPABASE_URL && SUPABASE_KEY) {
     try {
@@ -57,7 +62,7 @@ export async function POST(request: Request) {
         nrp: body.nrp || "11050182740981",
         unit: body.unit || "Pusat Sandi & Siber TNI-AD (PUSSANSERAD)",
         rank: body.rank || "Perwira",
-        status: "APPROVED",
+        status: requestedStatus,
         public_key: `ED25519-MIL-CERT-${(body.email || "OFFICER").split("@")[0].toUpperCase()}-2026`,
       };
 
@@ -102,7 +107,7 @@ export async function POST(request: Request) {
       nrp: body.nrp || "11050182740981",
       unit: body.unit || "Pusat Sandi & Siber TNI-AD",
       rank: body.rank || "Perwira",
-      status: "APPROVED",
+      status: requestedStatus,
       public_key: `ED25519-MIL-CERT-OFFICER-2026`,
     },
     token: `mil-jwt-local-${id}`,

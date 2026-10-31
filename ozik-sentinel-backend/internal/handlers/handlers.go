@@ -1215,12 +1215,13 @@ func (h *Handlers) HandleGetOfficer(c *gin.Context) {
 
 func (h *Handlers) HandleRegisterOfficer(c *gin.Context) {
 	var body struct {
-		Name  string              `json:"name"`
-		Email string              `json:"email"`
-		Role  models.TacticalRole `json:"role"`
-		NRP   string              `json:"nrp"`
-		Unit  string              `json:"unit"`
-		Rank  string              `json:"rank"`
+		Name   string              `json:"name"`
+		Email  string              `json:"email"`
+		Role   models.TacticalRole `json:"role"`
+		NRP    string              `json:"nrp"`
+		Unit   string              `json:"unit"`
+		Rank   string              `json:"rank"`
+		Status string              `json:"status"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -1230,6 +1231,10 @@ func (h *Handlers) HandleRegisterOfficer(c *gin.Context) {
 	if body.Role == "" {
 		body.Role = models.RoleCommander
 	}
+	initialStatus := "APPROVED"
+	if strings.EqualFold(strings.TrimSpace(body.Status), "PENDING") {
+		initialStatus = "PENDING"
+	}
 	off := models.OfficerProfile{
 		ID:        fmt.Sprintf("OFF-%d-%04d", time.Now().Unix()%100000, rand.Intn(9000)+1000),
 		Name:      body.Name,
@@ -1238,7 +1243,7 @@ func (h *Handlers) HandleRegisterOfficer(c *gin.Context) {
 		NRP:       body.NRP,
 		Unit:      body.Unit,
 		Rank:      body.Rank,
-		Status:    "APPROVED",
+		Status:    initialStatus,
 		CreatedAt: time.Now().Format(time.RFC3339),
 	}
 

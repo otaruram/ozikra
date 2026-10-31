@@ -124,6 +124,10 @@ export default function OnboardingPage() {
     e.preventDefault();
     setErrorMsg(null);
 
+    if (!email.trim()) {
+      setErrorMsg("Alamat email dinas wajib diisi.");
+      return;
+    }
     if (!fullName.trim()) {
       setErrorMsg("Nama Lengkap personel militer wajib diisi.");
       return;
@@ -136,7 +140,7 @@ export default function OnboardingPage() {
     setSubmitting(true);
 
     try {
-      // 1. Submit to Golang & PostgreSQL Backend Registration API
+      // 1. Submit to Golang & PostgreSQL Backend Registration API with PENDING approval status
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -147,6 +151,7 @@ export default function OnboardingPage() {
           unit,
           rank,
           role: selectedRole,
+          status: "PENDING",
         }),
       });
 
@@ -156,32 +161,35 @@ export default function OnboardingPage() {
         throw new Error(data?.error || data?.message || "Gagal melakukan registrasi personel");
       }
 
-      const officer = data.officer;
+      const officer = {
+        ...data.officer,
+        status: "PENDING",
+      };
 
-      // Clear pending storage
+      // Clear pending Google OAuth handoff keys
       window.sessionStorage.removeItem("ozikra_pending_google_email");
       window.sessionStorage.removeItem("ozikra_pending_google_name");
 
-      // Auto-approve in database so account is active
-      try {
-        await fetch("/api/admin/approve-officer", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            officer_id: officer.id,
-            approved_by: "Panglima Siber PUSSIBERAD",
-          }),
-        });
-      } catch (approveErr) {
-        console.warn("Auto-approve:", approveErr);
-      }
+      // Record Military Dispatch Notice ("Kawat Dinas") & New User Guide Trigger
+      const dispatchPayload = {
+        id: officer.id,
+        name: officer.name,
+        email: officer.email,
+        nrp: officer.nrp,
+        rank: officer.rank || rank,
+        unit: officer.unit || unit,
+        role: officer.role || selectedRole,
+        status: "PENDING",
+        sentAt: new Date().toISOString(),
+      };
+      window.sessionStorage.setItem(
+        "ozikra.pending_registration_dispatch",
+        JSON.stringify(dispatchPayload),
+      );
+      window.sessionStorage.setItem("ozikra.trigger_new_user_tour", "true");
 
-      // Immediately establish session and go to Command Console dashboard!
-      confirmOfficerSession({
-        ...officer,
-        status: "APPROVED",
-      });
-
+      // Immediately open Provisional Command Console session & route straight into /dashboard
+      confirmOfficerSession(officer, data.token);
       router.push("/dashboard");
     } catch (err: any) {
       console.error("Registration error:", err);
@@ -361,7 +369,7 @@ export default function OnboardingPage() {
                 Aktivasi Kredensial Personel Militer
               </h1>
               <p className="mt-2 max-w-[64ch] text-sm leading-relaxed text-muted">
-                Lengkapi berkas penugasan resmi di bawah ini atau gunakan tombol prasetel cepat untuk langsung membuka Konsol Komando pada ruang kerja terisolasi Anda.
+                Lengkapi formulir penugasan personel di bawah ini. Berkas akan diteruskan ke Meja Super Admin (Pussiberad) untuk pengesahan komando, sementara <strong className="font-medium text-paper">Izin Operasi Sementara</strong> langsung membuka akses Konsol Komando tanpa hambatan.
               </p>
             </div>
 
@@ -623,7 +631,7 @@ export default function OnboardingPage() {
               loading={submitting}
               icon={<Icon.Arrow size={16} />}
             >
-              Aktifkan Akun Personel &amp; Buka Console
+              Kirim Berkas ke Super Admin &amp; Masuk Konsol
             </Button>
           </div>
         </form>

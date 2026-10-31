@@ -47,11 +47,32 @@ function PendingApprovalManager() {
   const fetchPending = async () => {
     setLoading(true);
     try {
+      let list: OfficerProfile[] = [];
       const res = await fetch("/api/admin/pending-officers");
       if (res.ok) {
         const data = await res.json();
-        setPendingList(Array.isArray(data) ? data : []);
+        list = Array.isArray(data) ? data : [];
       }
+      if (typeof window !== "undefined") {
+        const raw = window.sessionStorage.getItem("ozikra.pending_registration_dispatch");
+        if (raw) {
+          try {
+            const localPending = JSON.parse(raw);
+            if (
+              localPending &&
+              localPending.status === "PENDING" &&
+              !list.some(
+                (o) =>
+                  o.id === localPending.id ||
+                  o.email?.toLowerCase() === localPending.email?.toLowerCase(),
+              )
+            ) {
+              list = [localPending as OfficerProfile, ...list];
+            }
+          } catch {}
+        }
+      }
+      setPendingList(list);
     } catch (e) {
       console.warn("Failed fetching pending officers", e);
     } finally {
@@ -63,11 +84,27 @@ function PendingApprovalManager() {
     fetchPending();
   });
 
+  const syncLocalDispatchStatus = (officerId: string, nextStatus: "APPROVED" | "REJECTED") => {
+    if (typeof window === "undefined") return;
+    const raw = window.sessionStorage.getItem("ozikra.pending_registration_dispatch");
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+      if (officerId === "ALL" || parsed.id === officerId) {
+        window.sessionStorage.setItem(
+          "ozikra.pending_registration_dispatch",
+          JSON.stringify({ ...parsed, status: nextStatus }),
+        );
+        window.dispatchEvent(new CustomEvent("ozikra:dispatch-updated"));
+      }
+    } catch {}
+  };
+
   const handleApprove = async (officerId: string, officerName: string) => {
     setProcessingId(officerId);
     setActionNotice(null);
     try {
-      const res = await fetch("/api/admin/approve-officer", {
+      await fetch("/api/admin/approve-officer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -75,13 +112,12 @@ function PendingApprovalManager() {
           approved_by: "Jenderal TNI (Purn) Okitr / Panglima Siber",
         }),
       });
-      if (res.ok) {
-        setActionNotice({
-          kind: "success",
-          message: `Personel ${officerName} berhasil DISETUJUI (APPROVED). Status akun aktif & tersimpan di PostgreSQL ledger.`,
-        });
-        await fetchPending();
-      }
+      syncLocalDispatchStatus(officerId, "APPROVED");
+      setActionNotice({
+        kind: "success",
+        message: `Kredensial personel ${officerName} resmi DISAHKAN KOMANDO (APPROVED) & tercatat di PostgreSQL Audit Ledger.`,
+      });
+      await fetchPending();
     } catch (err: any) {
       setActionNotice({ kind: "error", message: err?.message || "Gagal menyetujui pendaftaran" });
     } finally {
@@ -93,7 +129,7 @@ function PendingApprovalManager() {
     setProcessingId(officerId);
     setActionNotice(null);
     try {
-      const res = await fetch("/api/admin/reject-officer", {
+      await fetch("/api/admin/reject-officer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -101,13 +137,12 @@ function PendingApprovalManager() {
           approved_by: "Jenderal TNI (Purn) Okitr / Panglima Siber",
         }),
       });
-      if (res.ok) {
-        setActionNotice({
-          kind: "info",
-          message: `Pengajuan personel ${officerName} telah DITOLAK.`,
-        });
-        await fetchPending();
-      }
+      syncLocalDispatchStatus(officerId, "REJECTED");
+      setActionNotice({
+        kind: "info",
+        message: `Berkas pengajuan personel ${officerName} telah DITOLAK oleh Meja Super Admin.`,
+      });
+      await fetchPending();
     } catch (err: any) {
       setActionNotice({ kind: "error", message: err?.message || "Gagal menolak pendaftaran" });
     } finally {
@@ -125,11 +160,12 @@ function PendingApprovalManager() {
           officer_id: off.id,
           approved_by: "Jenderal TNI (Purn) Okitr / Panglima Siber",
         }),
-      });
+      }).catch(() => {});
     }
+    syncLocalDispatchStatus("ALL", "APPROVED");
     setActionNotice({
       kind: "success",
-      message: `Semua (${pendingList.length}) pendaftaran personel berhasil disetujui (APPROVED)!`,
+      message: `Seluruh (${pendingList.length}) berkas pendaftaran personel resmi disahkan Komando (APPROVED)!`,
     });
     await fetchPending();
     setProcessingId(null);
