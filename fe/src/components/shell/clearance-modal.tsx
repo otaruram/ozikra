@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Icon } from "@/components/icons";
 import { Button, Input, Mono, Select } from "@/components/ui";
+import { generateClearanceAutoFill } from "@/lib/autofill-generator";
 import { useSession } from "@/lib/session-context";
 
 interface ClearanceModalProps {
@@ -21,9 +22,22 @@ export function ClearanceModal({ isOpen, onSuccess }: ClearanceModalProps) {
   if (!isOpen) return null;
 
   const handleAutoFill = () => {
-    setSprintNumber("SPRINT/1089/X/2026/PUSSIBERAD-HACKATHON");
-    setSector("SEKTOR-01-MABES-PUSSIBERAD");
-    setClearanceLevel("TOP_SECRET_LEVEL_4");
+    const preset = generateClearanceAutoFill(session?.user?.email);
+    setSprintNumber(preset.sprintNumber);
+    const sectorOpts = [
+      "SEKTOR-01-MABES-PUSSIBERAD",
+      "SEKTOR-02-KODAM-JAYA",
+      "SEKTOR-03-KOOPSUDNAS",
+      "SEKTOR-04-ARMORY-TACTICAL",
+    ];
+    const levelOpts = [
+      "TOP_SECRET_LEVEL_4",
+      "SECRET_LEVEL_3",
+      "CONFIDENTIAL_LEVEL_2",
+    ];
+    const hash = preset.sprintNumber.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+    setSector(sectorOpts[hash % sectorOpts.length]);
+    setClearanceLevel(levelOpts[hash % levelOpts.length]);
     setAgreement(true);
   };
 

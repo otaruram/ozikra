@@ -130,15 +130,21 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
             )}
           </button>
           {roleOpen && (
-            <div className="absolute right-0 top-11 w-72 border border-line-strong bg-surface p-1 shadow-2xl shadow-black animate-fade-up z-50">
+            <div className="absolute right-0 top-11 z-50 w-[calc(100vw-2rem)] max-w-72 border border-line-strong bg-surface p-1 shadow-2xl shadow-black animate-fade-up">
               <div className="border-b border-line px-3 py-2.5">
                 <div className="flex items-center justify-between">
                   <p className="font-mono text-[9.5px] uppercase tracking-[0.18em] text-muted">Switch Role Simulator</p>
                   {isSwitching && <Icon.Refresh size={11} className="animate-spin text-paper" />}
                 </div>
                 <p className="mt-1 text-[11.5px] leading-snug text-subtle">
-                  Evaluate each tactical perspective with a single account.
+                  Evaluate each tactical perspective with your active account.
                 </p>
+                <div className="mt-2 flex items-center gap-1.5 border border-line bg-surface-2 px-2 py-1 font-mono text-[10px] text-paper">
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
+                  <span className="truncate" title={session.user.email}>
+                    {session.user.email}
+                  </span>
+                </div>
               </div>
               {TACTICAL_ROLES.map((r) => (
                 <button
@@ -185,7 +191,7 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
             {initials}
           </button>
           {userOpen && (
-            <div className="absolute right-0 top-11 w-64 border border-line-strong bg-surface shadow-2xl shadow-black animate-fade-up">
+            <div className="absolute right-0 top-11 z-50 w-[calc(100vw-2rem)] max-w-64 border border-line-strong bg-surface shadow-2xl shadow-black animate-fade-up">
               <div className="border-b border-line px-4 py-3">
                 <p className="text-sm font-medium">{session.user.name}</p>
                 <p className="truncate font-mono text-[11px] text-muted">{session.user.email}</p>

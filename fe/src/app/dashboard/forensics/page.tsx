@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Icon } from "@/components/icons";
 import { RoleGate } from "@/components/shell/role-gate";
 import {
@@ -23,8 +23,10 @@ import {
   onExportForensicReport,
   onIsolateAssetNode,
   onRunForensicAgent,
+  onTriggerTelemetryTestEvent,
   recordAuditAction,
 } from "@/lib/api";
+import { getNextUserPresetIndex } from "@/lib/autofill-generator";
 import { canKillSwitch as checkKillSwitch } from "@/lib/rbac";
 import { sanitizeMilitaryText } from "@/lib/sanitize";
 import { useSession } from "@/lib/session-context";
@@ -74,7 +76,7 @@ function CleanMarkdownView({ content }: { content: string }) {
 }
 
 export default function ForensicsPage() {
-  const { role } = useSession();
+  const { role, session } = useSession();
   const assets = useAsyncResource(fetchAssets);
   const [assetId, setAssetId] = useState("");
   const [showReportModal, setShowReportModal] = useState(false);
@@ -86,6 +88,18 @@ export default function ForensicsPage() {
 
   const [isExporting, setIsExporting] = useState(false);
   const [exportNotice, setExportNotice] = useState<{ kind: "error" | "info" | "success"; message: string } | null>(null);
+
+  // Support deep-link from Leaflet Tactical Map (?assetId=...)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const qAsset = params.get("assetId");
+    if (qAsset) {
+      setAssetId(qAsset);
+      investigate.run(qAsset);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleExportForensicReport = async (targetAssetId?: string) => {
     const idToExport = targetAssetId || report?.assetId || assetId;
@@ -122,8 +136,23 @@ export default function ForensicsPage() {
   };
 
   const handleAutoFillForensics = async () => {
-    const target = assets.data?.find((a) => a.integrityState === "COMPROMISED" || a.id === "AST-RADIO-VHF") || assets.data?.[0];
-    const targetId = target ? target.id : "AST-RADIO-VHF";
+    const list = assets.data || [];
+    let targetId = "";
+
+    if (list.length > 0) {
+      const idx = getNextUserPresetIndex("forensics", list.length, session?.user?.email);
+      targetId = list[idx].id;
+    } else {
+      // User has an empty workspace: auto-inject a unique compromised asset + anomaly for this user first
+      try {
+        const evt = await onTriggerTelemetryTestEvent();
+        targetId = evt.assetId;
+        await assets.refetch();
+      } catch {
+        targetId = `AST-OT-${Math.floor(100 + Math.random() * 899)}`;
+      }
+    }
+
     setAssetId(targetId);
     // Execute real backend AI investigation & write RCA into Supabase
     await investigate.run(targetId);

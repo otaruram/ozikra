@@ -63,6 +63,7 @@ type TelemetryInput struct {
 	FirmwareHash  string
 	NetworkTxKbps float64
 	QRHash        string
+	OwnerID       string
 }
 
 type CorrelationVerdict struct {
@@ -86,6 +87,10 @@ func (s *SIEMService) CorrelateTelemetry(in TelemetryInput) CorrelationVerdict {
 
 	// Lookup asset in Supabase to compare against baseline firmware hash
 	asset, foundAsset := s.repo.GetAssetByID(in.AssetID)
+	ownerID := in.OwnerID
+	if ownerID == "" && foundAsset {
+		ownerID = asset.OwnerID
+	}
 
 	if hasWindow && activeWindow != nil {
 		auth = models.AuthStatusAuthorized
@@ -121,14 +126,19 @@ func (s *SIEMService) CorrelateTelemetry(in TelemetryInput) CorrelationVerdict {
 	}
 
 	corrID := fmt.Sprintf("CORR-%d-%04d", time.Now().UnixNano(), rand.Intn(10000))
+	fwPreview := in.FirmwareHash
+	if len(fwPreview) > 16 {
+		fwPreview = fwPreview[:16]
+	}
 	corr := &models.TelemetryCorrelation{
 		ID:                    corrID,
 		Timestamp:             time.Now().Format(time.RFC3339),
 		AssetID:               in.AssetID,
-		NetworkEvent:          fmt.Sprintf("FW: %s | Tx: %.0f Kbps | Temp: %.1f C", in.FirmwareHash[:min(16, len(in.FirmwareHash))], in.NetworkTxKbps, in.TemperatureC),
+		NetworkEvent:          fmt.Sprintf("FW: %s | Tx: %.0f Kbps | Temp: %.1f C", fwPreview, in.NetworkTxKbps, in.TemperatureC),
 		PhysicalAuthorization: auth,
 		MaintenanceWindowID:   windowID,
 		Verdict:               verdict,
+		OwnerID:               ownerID,
 	}
 
 	// Persist to Supabase

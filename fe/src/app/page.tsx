@@ -151,9 +151,9 @@ export default function LandingPage() {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-paper/[0.04] to-transparent animate-scan" />
 
       {/* Navbar */}
-      <nav className="relative z-10 flex items-center justify-between border-b border-line px-6 py-4 md:px-10">
-        <OzikLogo size={28} />
-        <div className="flex items-center gap-3">
+      <nav className="relative z-10 flex items-center justify-between gap-2 border-b border-line px-4 py-3.5 sm:px-6 md:px-10 md:py-4">
+        <OzikLogo size={26} />
+        <div className="flex items-center gap-2 sm:gap-3">
           <span className="hidden items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted md:flex">
             <span className="h-1.5 w-1.5 rounded-full bg-paper" /> PUSSIBERAD · Kartika Cyber Hackathon 2026
           </span>
@@ -164,24 +164,24 @@ export default function LandingPage() {
             </Button>
           ) : (
             <Button id="nav-google-signin" variant="primary" size="sm" onClick={handleGoogleSignInClick} loading={pending === "google"} icon={<Icon.Google size={14} />}>
-              Sign In with Google
+              Sign In
             </Button>
           )}
         </div>
       </nav>
 
       {/* Hero */}
-      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-6 py-16 md:px-10">
-        <div className="flex flex-col items-start gap-7">
-          <div className="animate-fade-up">
-            <span className="inline-flex items-center gap-2 border border-line-strong bg-surface/80 px-3 py-1.5 font-mono text-[10.5px] tracking-[0.16em] text-paper backdrop-blur">
-              <span className="h-1.5 w-1.5 animate-blink bg-paper" />
-              [ZERO-TRUST IT/OT SUPPLY-CHAIN &amp; LIGHTWEIGHT SIEM]
+      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-5 py-10 sm:px-6 md:px-10 md:py-16">
+        <div className="flex flex-col items-start gap-6 md:gap-7">
+          <div className="max-w-full animate-fade-up">
+            <span className="inline-flex max-w-full flex-wrap items-center gap-2 border border-line-strong bg-surface/80 px-2.5 py-1.5 font-mono text-[9.5px] tracking-[0.12em] text-paper backdrop-blur sm:px-3 sm:text-[10.5px] sm:tracking-[0.16em]">
+              <span className="h-1.5 w-1.5 shrink-0 animate-blink bg-paper" />
+              <span className="break-words">[ZERO-TRUST IT/OT SUPPLY-CHAIN &amp; LIGHTWEIGHT SIEM]</span>
             </span>
           </div>
 
           <h1
-            className="max-w-4xl text-[44px] font-semibold leading-[0.98] tracking-[-0.045em] animate-fade-up sm:text-6xl md:text-[80px]"
+            className="max-w-4xl text-[34px] font-semibold leading-[1.06] tracking-[-0.04em] animate-fade-up sm:text-6xl sm:leading-[0.98] md:text-[80px]"
             style={{ animationDelay: "80ms" }}
           >
             End-to-End Physical-to-Cyber
@@ -189,20 +189,21 @@ export default function LandingPage() {
             <span className="bg-gradient-to-b from-paper to-paper/40 bg-clip-text text-transparent">Asset Integrity.</span>
           </h1>
 
-          <p className="max-w-2xl text-base leading-relaxed text-muted animate-fade-up md:text-lg" style={{ animationDelay: "160ms" }}>
+          <p className="max-w-2xl text-[15px] leading-relaxed text-muted animate-fade-up sm:text-base md:text-lg" style={{ animationDelay: "160ms" }}>
             Three phases, one chain of custody. <span className="text-paper">Supply-Chain Gatekeeper</span> seals every asset before deployment,{" "}
             <span className="text-paper">QR Maintenance SIEM</span> binds physical access to cyber events, and{" "}
             <span className="text-paper">AI Digital Forensics</span> reconstructs every incident automatically.
           </p>
 
-          <div className="flex flex-wrap items-center gap-3 animate-fade-up" style={{ animationDelay: "240ms" }}>
-            <Button id="hero-google-oauth" variant="primary" size="lg" onClick={handleGoogleSignInClick} loading={pending === "google"} icon={<Icon.Google size={16} />}>
+          <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center animate-fade-up" style={{ animationDelay: "240ms" }}>
+            <Button id="hero-google-oauth" variant="primary" size="lg" className="w-full sm:w-auto" onClick={handleGoogleSignInClick} loading={pending === "google"} icon={<Icon.Google size={16} />}>
               Masuk dengan Akun Google
             </Button>
             <Button
               id="hero-register-new"
               variant="outline"
               size="lg"
+              className="w-full px-4 text-xs sm:w-auto sm:px-6 sm:text-sm"
               onClick={() => router.push("/onboarding")}
               icon={<Icon.Arrow size={14} />}
             >

@@ -171,7 +171,7 @@ export default function LedgerPage() {
       waktu_terima: item.timestamp,
       petugas_bekpal: item.actor,
       status_segel: item.action.includes("QUARANTINE") ? "KARANTINA_DEFECT" : "TERSEGEL_RESMI_MIL_SPEC",
-      verifikasi_qr_url: `https://ozikra.vercel.app/verify?id=${encodeURIComponent(item.assetId || "AST-OT-728")}&sig=${encodeURIComponent(item.hash)}&ts=${encodeURIComponent(item.timestamp)}`,
+      verifikasi_qr_url: `https://oziksentinel.biz.id/verify?id=${encodeURIComponent(item.assetId || "AST-OT")}&sig=${encodeURIComponent(item.hash)}&ts=${encodeURIComponent(item.timestamp)}`,
       sha256_hash_segel: item.hash,
       blok_sebelumnya: item.previousHash,
     };
@@ -418,8 +418,8 @@ export default function LedgerPage() {
               {pagination.paginatedItems.map((item) => {
                 const isSeal = item.action.includes("SEAL") || item.action.includes("GATEKEEPER");
                 const isQuarantine = item.action.includes("QUARANTINE");
-                const verifyUrl = `https://ozikra.vercel.app/verify?id=${encodeURIComponent(
-                  item.assetId || "AST-OT-728"
+                const verifyUrl = `https://oziksentinel.biz.id/verify?id=${encodeURIComponent(
+                  item.assetId || "AST-OT"
                 )}&sig=${encodeURIComponent(item.hash)}&ts=${encodeURIComponent(item.timestamp)}&vendor=PT+Len+Industri`;
 
                 return (
@@ -515,13 +515,13 @@ export default function LedgerPage() {
         <div className="flex flex-col gap-4">
           {/* Commander C2 Situation Banner */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="border border-red-500/40 bg-red-950/20 p-4 flex flex-col gap-1">
+            <div className="border border-red-500/50 bg-red-500/10 p-4 flex flex-col gap-1">
               <Eyebrow>Postur Pertahanan Siber</Eyebrow>
               <div className="flex items-center gap-2 mt-1">
                 <span className="h-3 w-3 rounded-full bg-red-500 animate-ping" />
-                <span className="font-mono text-2xl font-black text-red-400">DEFCON 2</span>
+                <span className="font-mono text-2xl font-black text-red-500">DEFCON 2</span>
               </div>
-              <span className="text-[11px] text-red-300/80 font-mono">Elevated Readiness Alert</span>
+              <span className="text-[11px] text-red-500 font-semibold font-mono">Elevated Readiness Alert</span>
             </div>
             <div className="border border-line bg-surface p-4 flex flex-col gap-1">
               <Eyebrow>Surat Perintah (SPRIN)</Eyebrow>
@@ -530,10 +530,10 @@ export default function LedgerPage() {
             </div>
             <div className="border border-line bg-surface p-4 flex flex-col gap-1">
               <Eyebrow>Isolasi Nodal Air-Gap</Eyebrow>
-              <span className="font-mono text-3xl font-bold text-amber-400">
+              <span className="font-mono text-3xl font-bold text-amber-500">
                 {rows?.filter((r) => r.action.includes("KILL_SWITCH") || r.action.includes("ISOLAT")).length ?? 0}
               </span>
-              <span className="text-[11px] text-amber-400/80 font-mono">Node Diputus Relai Fisik</span>
+              <span className="text-[11px] text-amber-500 font-mono">Node Diputus Relai Fisik</span>
             </div>
             <div className="border border-line bg-surface p-4 flex flex-col gap-1">
               <Eyebrow>Otoritas Komando C2</Eyebrow>
@@ -693,13 +693,13 @@ export default function LedgerPage() {
               <span className="font-mono text-3xl font-bold text-paper">{rows?.length ?? 0}</span>
               <span className="text-[11px] text-muted font-mono">Dossier Kasus Digital Terbit</span>
             </div>
-            <div className="border border-emerald-500/40 bg-emerald-950/20 p-4 flex flex-col gap-1">
+            <div className="border border-emerald-500/40 bg-emerald-500/10 p-4 flex flex-col gap-1">
               <Eyebrow>Chain of Custody</Eyebrow>
               <div className="flex items-center gap-2 mt-1">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-                <span className="font-mono text-2xl font-bold text-emerald-400">100% UTUH</span>
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                <span className="font-mono text-2xl font-bold text-emerald-500">100% UTUH</span>
               </div>
-              <span className="text-[11px] text-emerald-300/80 font-mono">Rantai Bukti Tidak Terputus</span>
+              <span className="text-[11px] text-emerald-500 font-semibold font-mono">Rantai Bukti Tidak Terputus</span>
             </div>
             <div className="border border-line bg-surface p-4 flex flex-col gap-1">
               <Eyebrow>Bukti Model AI Terkunci</Eyebrow>

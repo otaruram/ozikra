@@ -6,6 +6,7 @@ import { Icon } from "@/components/icons";
 import { OzikLogo } from "@/components/brand/OzikLogo";
 import { Button, Eyebrow, Input, Mono, Tag } from "@/components/ui";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { generateOnboardingAutoFill } from "@/lib/autofill-generator";
 import { useSession } from "@/lib/session-context";
 import type { TacticalRole } from "@/types/sentinel";
 
@@ -97,12 +98,23 @@ export default function OnboardingPage() {
       setEmail(session.user.email);
       setFullName(session.user.name);
     } else {
-      // Default demo officer email if accessing directly
-      const tempEmail = "perwira.siber@tni-ad.mil.id";
-      setEmail(tempEmail);
-      setFullName("Mayor Cke Pratama, S.T.");
+      // Start clean/empty until user types or clicks Auto-Fill
+      setEmail("");
+      setFullName("");
     }
   }, [session]);
+
+  const applyDynamicOnboardingAutoFill = (rolePreset: TacticalRole, rankPreset: string) => {
+    const generated = generateOnboardingAutoFill(rolePreset);
+    setRank(rankPreset);
+    setFullName(generated.fullName.replace(/^[^\s]+\s+[^\s]+\s+/, ""));
+    if (!window.sessionStorage.getItem("ozikra_pending_google_email")) {
+      setEmail(generated.email);
+    }
+    setNrp(generated.nrp);
+    setUnit(generated.unit);
+    setSelectedRole(rolePreset);
+  };
 
   const [submittedOfficer, setSubmittedOfficer] = useState<any>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
@@ -217,19 +229,20 @@ export default function OnboardingPage() {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-paper/40 to-transparent" />
 
       {/* Top Bar */}
-      <header className="relative z-10 flex items-center justify-between border-b border-line px-6 py-4 md:px-10">
-        <OzikLogo size={28} />
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-2 border border-line bg-surface/80 px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-[0.15em] text-paper">
-            <span className="h-1.5 w-1.5 animate-pulse bg-emerald-400" />
-            PostgreSQL &amp; Prisma Active
+      <header className="relative z-10 flex items-center justify-between gap-2 border-b border-line px-4 py-3.5 sm:px-6 md:px-10 md:py-4">
+        <OzikLogo size={26} />
+        <div className="flex items-center gap-2 sm:gap-3">
+          <span className="flex items-center gap-1.5 border border-line bg-surface/80 px-2 py-1 font-mono text-[9.5px] uppercase tracking-[0.12em] text-paper sm:gap-2 sm:px-2.5 sm:text-[10.5px] sm:tracking-[0.15em]">
+            <span className="h-1.5 w-1.5 shrink-0 animate-pulse bg-emerald-400" />
+            <span className="hidden sm:inline">PostgreSQL &amp; Prisma Active</span>
+            <span className="sm:hidden">DB ACTIVE</span>
           </span>
           <ThemeToggle id="onboarding-theme-toggle" />
         </div>
       </header>
 
       {/* Main Content: Pending Approval Card OR Registration Form */}
-      <main className="relative z-10 mx-auto w-full max-w-4xl flex-1 px-6 py-10">
+      <main className="relative z-10 mx-auto w-full max-w-4xl flex-1 px-4 py-7 sm:px-6 md:py-10">
         {submittedOfficer ? (
           <div className="border border-paper/40 bg-surface/80 p-6 md:p-8 backdrop-blur shadow-2xl animate-fade-up">
             <div className="flex items-center gap-2 mb-3">
@@ -340,11 +353,13 @@ export default function OnboardingPage() {
         ) : (
           <div>
             <div className="mb-8">
-              <div className="mb-2 flex items-center gap-2">
-                <Tag tone="muted">PUSSIBERAD · PROTOKOL REGISTRASI PERSONEL</Tag>
-                <span className="font-mono text-[10.5px] text-muted">MIL-SPEC RBAC 2026</span>
+              <div className="mb-2.5 flex flex-wrap items-center gap-2">
+                <Tag tone="muted" className="whitespace-normal break-words text-[9.5px] sm:whitespace-nowrap sm:text-[10px]">
+                  PUSSIBERAD · PROTOKOL REGISTRASI PERSONEL
+                </Tag>
+                <span className="font-mono text-[10px] text-muted sm:text-[10.5px]">MIL-SPEC RBAC 2026</span>
               </div>
-              <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl md:text-4xl">
                 Aktivasi Kredensial Personel Militer
               </h1>
               <p className="mt-2 text-sm text-muted">
@@ -353,7 +368,7 @@ export default function OnboardingPage() {
             </div>
 
             {errorMsg && (
-              <div className="mb-6 flex items-center gap-3 border border-red-500/40 bg-red-500/10 p-3.5 font-mono text-xs text-red-300">
+              <div className="mb-6 flex items-center gap-3 border border-red-500/40 bg-red-500/10 p-3.5 font-mono text-xs text-red-400">
                 <Icon.Bolt size={16} />
                 <span>{errorMsg}</span>
               </div>
@@ -361,20 +376,27 @@ export default function OnboardingPage() {
 
             <form onSubmit={handleSubmit} className="space-y-8">
               {/* Section 1: Verified Google Account Card */}
-              <div className="border border-line bg-surface/60 p-5 backdrop-blur">
+              <div className="border border-line bg-surface/60 p-4 backdrop-blur sm:p-5">
                 <Eyebrow>01 · IDENTITAS GOOGLE TERVERIFIKASI</Eyebrow>
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-4 border border-line/60 bg-surface-2/80 p-3.5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface">
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border border-line/60 bg-surface-2/80 p-3.5">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line bg-surface">
                       <Icon.Google size={18} />
                     </div>
-                    <div>
-                      <div className="font-mono text-xs font-semibold text-paper">{email}</div>
+                    <div className="min-w-0 flex-1">
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Ketik email dinas atau klik Auto-Fill di bawah…"
+                        className="w-full bg-transparent font-mono text-xs font-semibold text-paper placeholder:text-muted/60 focus:outline-none break-all"
+                        required
+                      />
                       <div className="font-mono text-[11px] text-muted">Google OAuth SSO Provider Token Valid</div>
                     </div>
                   </div>
-                  <span className="inline-flex items-center gap-1.5 border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 font-mono text-[10px] tracking-wider text-emerald-400">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  <span className="inline-flex items-center gap-1.5 border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 font-mono text-[10px] font-semibold tracking-wider text-emerald-500">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                     GOOGLE VERIFIED
                   </span>
                 </div>
@@ -387,71 +409,47 @@ export default function OnboardingPage() {
               <span className="font-mono text-[10px] text-muted">NOMOR PASUKAN / SPRINT WAJIB</span>
             </div>
 
-            {/* Quick Access Presets for Judges & Testing */}
+            {/* Quick Access Presets for Judges & Testing (Unique per User & Click) */}
             <div className="mb-5 border border-line bg-surface-2/60 p-3.5">
               <span className="font-mono text-[10.5px] uppercase tracking-wider text-paper font-semibold block mb-2">
-                ⚡ Akses Cepat / Auto-Fill Penjurian:
+                ⚡ Akses Cepat / Auto-Fill Identitas Unik (Berbeda Tiap User &amp; Klik):
               </span>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setRank("Mayor Cke");
-                    setFullName("Okitr, S.Kom., M.Han.");
-                    setNrp("11980182740999");
-                    setUnit("Pusat Sandi & Siber TNI-AD (PUSSANSERAD)");
-                    setSelectedRole("COMMANDER");
-                  }}
+                  onClick={() => applyDynamicOnboardingAutoFill("COMMANDER", "Mayor Cke")}
                   className="justify-start text-left text-[11px] border-paper/40 hover:bg-paper hover:text-ink"
                 >
-                  ⚡ Panglima (Super Admin)
+                  ⚡ Auto-Fill Komando (Format A)
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setRank("Kolonel Cke");
-                    setFullName("Ozikra, S.T., M.Sc.");
-                    setNrp("11050182740981");
-                    setUnit("Pusat Sandi & Siber TNI-AD (PUSSANSERAD)");
-                    setSelectedRole("COMMANDER");
-                  }}
+                  onClick={() => applyDynamicOnboardingAutoFill("COMMANDER", "Kolonel Cke")}
                   className="justify-start text-left text-[11px] border-paper/40 hover:bg-paper hover:text-ink"
                 >
-                  ⚡ Kolonel Ozikra (Commander)
+                  ⚡ Auto-Fill Commander (Format B)
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setRank("Kapten Cba");
-                    setFullName("Sari Ramadhani");
-                    setNrp("11120183740922");
-                    setUnit("Direktorat Pembekalan Angkutan TNI-AD (Ditbekangad)");
-                    setSelectedRole("LOGISTICS_OFFICER");
-                  }}
+                  onClick={() => applyDynamicOnboardingAutoFill("LOGISTICS_OFFICER", "Kapten Cba")}
                   className="justify-start text-left text-[11px] border-paper/40 hover:bg-paper hover:text-ink"
                 >
-                  ⚡ Kapten Sari (Logistik)
+                  ⚡ Auto-Fill Logistik (Format C)
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setRank("Lettu Cke");
-                    setFullName("Reza Aditya, S.Kom.");
-                    setNrp("11180184740933");
-                    setUnit("Satuan Siber Mabes TNI (Satsiber TNI)");
-                    setSelectedRole("FORENSIC_AUDITOR");
-                  }}
+                  onClick={() => applyDynamicOnboardingAutoFill("FORENSIC_AUDITOR", "Lettu Cke")}
                   className="justify-start text-left text-[11px] border-paper/40 hover:bg-paper hover:text-ink"
                 >
-                  ⚡ Lettu Reza (Forensik)
+                  ⚡ Auto-Fill Forensik (Format D)
                 </Button>
               </div>
             </div>

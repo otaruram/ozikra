@@ -11,6 +11,7 @@ import {
 } from "react";
 import type { EngineConfig, Session, TacticalRole } from "@/types/sentinel";
 import { API_BASE_URL } from "@/lib/api";
+import { getOrCreateBrowserOfficerIdentity } from "@/lib/autofill-generator";
 
 const SESSION_KEY = "ozikra.session";
 const ENGINE_KEY = "ozikra.engine";
@@ -38,7 +39,14 @@ export function decodeJwtRole(token?: string | null): TacticalRole | null {
     if (parts.length !== 3) return null;
     const jsonStr = atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"));
     const payload = JSON.parse(jsonStr);
-    if (payload.role && (payload.role === "SUPER_ADMIN" || payload.role === "COMMANDER" || payload.role === "LOGISTICS_OFFICER" || payload.role === "FORENSIC_AUDITOR")) {
+    if (
+      payload.role &&
+      (payload.role === "SUPER_ADMIN" ||
+        payload.role === "COMMANDER" ||
+        payload.role === "LOGISTICS_OFFICER" ||
+        payload.role === "FORENSIC_AUDITOR" ||
+        payload.role === "OT_TECHNICIAN")
+    ) {
       return payload.role as TacticalRole;
     }
   } catch (e) {
@@ -100,16 +108,30 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const clearance = window.sessionStorage.getItem(CLEARANCE_KEY) === "true";
 
     queueMicrotask(() => {
+      const browserIdentity = getOrCreateBrowserOfficerIdentity();
       if (storedSession) {
+        // Migrate legacy shared demo email/id to unique per-browser identity so users never share workspaces
+        const isLegacyShared =
+          !storedSession.user?.email ||
+          storedSession.user.email === "evaluator.sandbox@ozikra.mil.id" ||
+          storedSession.user.email === "evaluator.pussiberad@tni-ad.mil.id" ||
+          storedSession.user.email === "komando.siber@pussiberad.mil.id";
+
         const sanitized: Session = {
           ...storedSession,
           user: {
             ...storedSession.user,
+            id: isLegacyShared ? browserIdentity.id : storedSession.user.id,
+            email: isLegacyShared ? browserIdentity.email : storedSession.user.email,
+            name: isLegacyShared ? browserIdentity.name : storedSession.user.name,
             status: storedSession.user.status || "APPROVED",
-            nrp: storedSession.user.nrp || "11050182740981",
+            nrp: storedSession.user.nrp || browserIdentity.nrp,
           },
         };
         setSession(sanitized);
+        if (isLegacyShared) {
+          window.localStorage.setItem(SESSION_KEY, JSON.stringify(sanitized));
+        }
       }
       if (storedEngine) setEngineState(storedEngine);
       setIsSandboxExhausted(sandboxUsed);
@@ -126,25 +148,60 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const confirmOfficerSession = useCallback(
     (off: any, token?: string) => {
+      const browserIdentity = getOrCreateBrowserOfficerIdentity();
+      const userObj = {
+        id: off.id || browserIdentity.id,
+        name: off.name || browserIdentity.name,
+        email: off.email || browserIdentity.email,
+        role: (off.role as TacticalRole) || "COMMANDER",
+        nrp: off.nrp || browserIdentity.nrp,
+        unit: off.unit || browserIdentity.unit,
+        rank: off.rank || "Perwira",
+        status: off.status || "APPROVED",
+        publicKey: off.publicKey,
+        avatarUrl: off.avatarUrl,
+      };
       persist({
-        user: {
-          id: off.id,
-          name: off.name,
-          email: off.email,
-          role: off.role as TacticalRole,
-          nrp: off.nrp || "11050182740981",
-          unit: off.unit || "Pusat Sandi & Siber TNI-AD (PUSSANSERAD)",
-          rank: off.rank || "Perwira",
-          status: off.status || "APPROVED",
-          publicKey: off.publicKey,
-          avatarUrl: off.avatarUrl,
-        },
+        user: userObj,
         provider: "GOOGLE_OAUTH",
-        simulatedRole: off.role as TacticalRole,
+        simulatedRole: userObj.role,
+        token,
         issuedAt: new Date().toISOString(),
       });
-      if (token && typeof window !== "undefined") {
-        window.localStorage.setItem("ozikra_mil_token", token);
+      if (typeof window !== "undefined") {
+        if (token) {
+          window.localStorage.setItem("ozikra_mil_token", token);
+          window.localStorage.setItem("ozikra.active_token", token);
+          document.cookie = `ozik_token=${token}; path=/; max-age=86400; SameSite=Lax`;
+        }
+        // Also ensure backend issues a valid 3-part HMAC JWT bound to this specific user
+        fetch(`${API_BASE_URL}/api/v1/auth/simulate-role`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Officer-Email": userObj.email,
+            "X-Officer-ID": userObj.id,
+          },
+          body: JSON.stringify({
+            target_role: userObj.role,
+            id: userObj.id,
+            name: userObj.name,
+            email: userObj.email,
+            nrp: userObj.nrp,
+          }),
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data) => {
+            if (data?.token) {
+              window.localStorage.setItem("ozikra.active_token", data.token);
+              document.cookie = `ozik_token=${data.token}; path=/; max-age=86400; SameSite=Lax`;
+              const current = readStorage<Session>(SESSION_KEY);
+              if (current) {
+                persist({ ...current, token: data.token });
+              }
+            }
+          })
+          .catch(() => {});
       }
     },
     [persist],
@@ -165,7 +222,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Sandbox Mode: STRICTLY LIMITED TO 1-TIME USE per browser/visitor
+  // Sandbox Mode: STRICTLY LIMITED TO 1-TIME USE per browser/visitor with unique per-user identity
   const enterSandbox = useCallback((): boolean => {
     const used = window.localStorage.getItem(SANDBOX_USED_KEY) === "true";
     if (used) {
@@ -177,13 +234,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     window.localStorage.setItem(SANDBOX_USED_KEY, "true");
     setIsSandboxExhausted(true);
 
+    const browserIdentity = getOrCreateBrowserOfficerIdentity();
+
     persist({
       user: {
-        id: "sandbox-evaluator-single",
-        name: "Sandbox Evaluator (1-Time Demo Pass)",
-        email: "evaluator.sandbox@ozikra.mil.id",
+        id: browserIdentity.id,
+        name: `${browserIdentity.name} (Sandbox)`,
+        email: browserIdentity.email,
         role: "SUPER_ADMIN",
-        publicKey: "ED25519-MIL-CERT-DEMO-PASS-2026",
+        nrp: browserIdentity.nrp,
+        unit: browserIdentity.unit,
+        publicKey: `ED25519-MIL-CERT-${browserIdentity.id.toUpperCase()}-2026`,
       },
       provider: "SANDBOX",
       simulatedRole: "SUPER_ADMIN",
@@ -191,11 +252,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     });
     setClearanceApproved(true);
 
-    // Call backend to mint real military JWT immediately
+    // Call backend to mint real military JWT immediately bound to this unique user
     fetch(`${API_BASE_URL}/api/v1/auth/simulate-role`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ target_role: "SUPER_ADMIN" }),
+      headers: {
+        "Content-Type": "application/json",
+        "X-Officer-Email": browserIdentity.email,
+        "X-Officer-ID": browserIdentity.id,
+      },
+      body: JSON.stringify({
+        target_role: "SUPER_ADMIN",
+        id: browserIdentity.id,
+        name: browserIdentity.name,
+        email: browserIdentity.email,
+        nrp: browserIdentity.nrp,
+      }),
     })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
@@ -359,8 +430,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             "Content-Type": "application/json",
             ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {}),
             "X-Simulated-Role": targetRole,
+            "X-Officer-Email": session.user.email,
+            "X-Officer-ID": session.user.id,
           },
-          body: JSON.stringify({ target_role: targetRole }),
+          body: JSON.stringify({
+            target_role: targetRole,
+            id: session.user.id,
+            name: session.user.name,
+            email: session.user.email,
+            nrp: session.user.nrp,
+          }),
         });
 
         if (res.ok) {
@@ -382,9 +461,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             user: {
               ...session.user,
               role: decodedRole,
-              ...(data.officer?.name ? { name: data.officer.name } : {}),
-              ...(data.officer?.email ? { email: data.officer.email } : {}),
-              ...(data.officer?.nrp ? { nrp: data.officer.nrp } : {}),
             },
           };
 

@@ -99,10 +99,10 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <header className="flex flex-col gap-4 border-b border-line pb-6 md:flex-row md:items-end md:justify-between animate-fade-up">
-      <div className="flex flex-col gap-2">
-        <Eyebrow>{eyebrow}</Eyebrow>
-        <h1 className="text-2xl font-semibold tracking-[-0.03em] md:text-[28px]">{title}</h1>
+    <header className="flex flex-col gap-4 border-b border-line pb-5 md:flex-row md:items-end md:justify-between md:pb-6 animate-fade-up">
+      <div className="flex min-w-0 flex-col gap-2">
+        <Eyebrow className="break-words">{eyebrow}</Eyebrow>
+        <h1 className="break-words text-2xl font-semibold tracking-[-0.03em] md:text-[28px]">{title}</h1>
         {description && <p className="max-w-2xl text-sm leading-relaxed text-muted">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -130,20 +130,20 @@ export function Panel({
   bodyClassName?: string;
 }) {
   return (
-    <section className={cn("relative flex flex-col border border-line bg-surface", className)}>
+    <section className={cn("relative flex min-w-0 flex-col border border-line bg-surface", className)}>
       {/* corner ticks */}
       <span className="pointer-events-none absolute -left-px -top-px h-2 w-2 border-l border-t border-paper/60" />
       <span className="pointer-events-none absolute -right-px -bottom-px h-2 w-2 border-r border-b border-paper/60" />
       {(title || actions) && (
-        <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-2.5 border-b border-line px-4 py-3.5 sm:px-5">
           <div className="flex min-w-0 flex-col gap-0.5">
             {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
-            {title && <h2 className="truncate text-sm font-semibold tracking-tight">{title}</h2>}
+            {title && <h2 className="break-words text-sm font-semibold tracking-tight">{title}</h2>}
           </div>
-          {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+          {actions && <div className="flex max-w-full flex-wrap items-center gap-2">{actions}</div>}
         </div>
       )}
-      <div className={cn("flex-1 p-5", bodyClassName)}>{children}</div>
+      <div className={cn("min-w-0 flex-1 p-4 sm:p-5", bodyClassName)}>{children}</div>
     </section>
   );
 }
@@ -534,14 +534,14 @@ export function Segmented<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="inline-flex border border-line bg-ink p-0.5">
+    <div className="inline-flex max-w-full flex-wrap border border-line bg-ink p-0.5">
       {options.map((o) => (
         <button
           key={o.value}
           type="button"
           onClick={() => onChange(o.value)}
           className={cn(
-            "cursor-pointer px-3 py-1.5 font-mono text-[10.5px] uppercase tracking-[0.12em] transition-colors",
+            "cursor-pointer px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.1em] transition-colors sm:px-3 sm:text-[10.5px] sm:tracking-[0.12em]",
             value === o.value ? "bg-paper text-ink" : "text-muted hover:text-paper",
           )}
         >

@@ -22,6 +22,7 @@ import type {
   TelemetryEvent,
   VerificationResult,
 } from "@/types/sentinel";
+import { getOrCreateBrowserOfficerIdentity } from "@/lib/autofill-generator";
 
 const envUrl =
   process.env.NEXT_PUBLIC_API_URL ||
@@ -46,11 +47,15 @@ function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
   if (typeof window !== "undefined") {
     try {
-      const activeToken = localStorage.getItem("ozikra.active_token");
+      const browserIdentity = getOrCreateBrowserOfficerIdentity();
+      const activeToken =
+        localStorage.getItem("ozikra.active_token") ||
+        localStorage.getItem("ozikra_mil_token");
       const stored = localStorage.getItem("ozikra.session");
       let token = activeToken;
       let role = "";
-      let email = "";
+      let email = browserIdentity.email;
+      let officerId = browserIdentity.id;
 
       if (stored) {
         const parsed = JSON.parse(stored);
@@ -62,8 +67,19 @@ function getAuthHeaders(): Record<string, string> {
         } else if (parsed?.user?.role) {
           role = parsed.user.role;
         }
-        if (parsed?.user?.email) {
+        if (
+          parsed?.user?.email &&
+          parsed.user.email !== "evaluator.sandbox@ozikra.mil.id" &&
+          parsed.user.email !== "evaluator.pussiberad@tni-ad.mil.id"
+        ) {
           email = parsed.user.email;
+        }
+        if (
+          parsed?.user?.id &&
+          parsed.user.id !== "sandbox-evaluator-single" &&
+          parsed.user.id !== "officer-evaluator"
+        ) {
+          officerId = parsed.user.id;
         }
       }
 
@@ -76,6 +92,9 @@ function getAuthHeaders(): Record<string, string> {
       }
       if (email) {
         headers["X-Officer-Email"] = email;
+      }
+      if (officerId) {
+        headers["X-Officer-ID"] = officerId;
       }
     } catch {}
   }

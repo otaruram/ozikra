@@ -193,44 +193,17 @@ func (r *Repository) migrate() {
 		`ALTER TABLE assets ADD COLUMN IF NOT EXISTS latitude NUMERIC(9,6);`,
 		`ALTER TABLE assets ADD COLUMN IF NOT EXISTS longitude NUMERIC(9,6);`,
 		`ALTER TABLE assets ADD COLUMN IF NOT EXISTS location_name VARCHAR(255);`,
-		`INSERT INTO assets (id, name, serial_number, vendor, type, classification, status, integrity_state, trust_score, firmware_hash, qr_hash, qr_window_status, cve_count, latitude, longitude, location_name)
-		VALUES
-			('AST-SRV-TACTICAL', 'Server Komando Taktis Mobile (IT Rugged Node)', 'SN-SRV-MIL-8841', 'Crystal Group Taktis', 'IT_SERVER', 'IT', 'MAINTENANCE', 'MAINTENANCE', 92, '4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a', '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8', 'OPEN', 1, -6.1754, 106.8272, 'Markas PUSSIBERAD Jakarta Pusat'),
-			('AST-RADAR-01', 'Radar Avionik Paskhas Maritim (OT Alutsista)', 'SN-RDR-2026-X9', 'PT Len Industri / Thales', 'OT_RADAR', 'OT', 'MAINTENANCE', 'SECURE', 98, '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'OPEN', 0, -6.1054, 106.8833, 'Radar Paskhas Maritim Tanjung Priok'),
-			('AST-OT-529', 'Sub-Detasemen Siber IKN Nusantara Sepaku', 'SN-IKN-2026-S01', 'PT Len Industri', 'OT_RADAR', 'OT', 'MAINTENANCE', 'MAINTENANCE', 88, '6c8d7e9f0123456789abcdef0123456789abcdef0123456789abcdef01234567', '7d8e9f0123456789abcdef0123456789abcdef0123456789abcdef012345678a', 'CLOSED', 1, -0.9744, 116.7099, 'Sub-Detasemen Siber IKN Nusantara Sepaku'),
-			('AST-RADIO-VHF', 'Radio Taktis VHF Harris Falcon (OT Manpack)', 'SN-RF-5800H-901', 'L3Harris Communications', 'TACTICAL_RADIO', 'OT', 'COMPROMISED', 'COMPROMISED', 45, 'ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d', 'ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d', 'CLOSED', 2, -6.2100, 106.8400, 'Patroli Mobile Taktis Kodam Jaya'),
-			('ARMORY-ENV-02', 'Sensor Suhu & Kelembaban Gudang Munisi (OT Safety)', 'SN-ARMORY-ENV-902', 'Schneider Electric Mil-Spec', 'OT_RADAR', 'OT', 'COMPROMISED', 'COMPROMISED', 40, 'a2c4e688b1357900dfba5832a5678b87452d3a985e5f3c1b0923485761019283', '3c9909afec25354d551dae21590bb26e38d53f2173b8d3dc3eee4c047e7ab1c1', 'CLOSED', 3, -6.2583, 106.8625, 'Gudang Munisi Daerah Paldam Jaya'),
-			('AST-OT-461', 'Radar Surveillance Mabes TNI Cilangkap', 'SN-RDR-2026-X9', 'PT Len Industri', 'OT_RADAR', 'OT', 'COMPROMISED', 'COMPROMISED', 35, 'e900779c8db4afa5fcaba5e92906fd8e9be4b508d3c985e9357f48cbc4e615b7', 'eb244f4e88740d2ed9e1a3194c75f839b579f4547b97c0b3d16c1afa16310437', 'CLOSED', 3, -6.3262, 106.9084, 'Radar Surveillance Mabes TNI Cilangkap'),
-			('AST-OT-358', 'Lanud Halim Perdanakusuma Drone Jammer', 'SN-JAM-2026-X77', 'PT Len Industri', 'OT_RADAR', 'OT', 'QUARANTINED', 'QUARANTINED', 30, 'd169ec49eba18b15a3e91e6296661ce3fc03999e261141114cf9b2b4a3d200eb', '3d25945d7d30ea11a3d1d676aaa2db9cc28d34cebe56f3cb536b003aa033fb20', 'CLOSED', 4, -6.2657, 106.8906, 'Lanud Halim Perdanakusuma Drone Jammer'),
-			('AST-OT-657', 'Pos Komando Pertahanan Siber Sentul', 'SN-RDR-2026-X99', 'PT Len Industri / Thales Defence', 'OT_RADAR', 'OT', 'QUARANTINED', 'QUARANTINED', 25, '379254913a08284821ccb53b1611e97bc07154c21e661401eba6832f3a507fe9', 'fef648a3a6e8b5fd28683a7cd3aaf0e7ab60a6cd2869bf8b357f1097424c919f', 'CLOSED', 4, -6.5278, 106.8911, 'Pos Komando Pertahanan Siber Sentul'),
-			('AST-OT-332', 'Radar Pertahanan Udara Pussenif Bandung', 'SN-RDR-2026-X99', 'PT Len Industri / Thales Defence', 'OT_RADAR', 'OT', 'QUARANTINED', 'QUARANTINED', 25, '379254913a08284821ccb53b1611e97bc07154c21e661401eba6832f3a507fe9', '782f70521eb06fd9fb8fbacf58cd8dc471ed662e26a9a0f9699bebfe743cff9d', 'CLOSED', 4, -6.9175, 107.6191, 'Radar Pertahanan Udara Pussenif Bandung'),
-			('AST-OT-792', 'Radar Pengintai Pesisir Kodam IV Semarang', 'SN-RDR-2026-X99', 'PT Len Industri / Thales Defence', 'OT_RADAR', 'OT', 'QUARANTINED', 'QUARANTINED', 20, '379254913a08284821ccb53b1611e97bc07154c21e661401eba6832f3a507fe9', 'fc293d2667af31b7ee5cd81fc4d83af9b0deae6eb669468c6880c31cb16479df', 'CLOSED', 4, -6.9800, 110.4200, 'Radar Pengintai Pesisir Kodam IV Semarang'),
-			('AST-OT-184', 'Pangkalan Radar Koarmada II Surabaya', 'SN-RDR-2026-X99', 'PT Len Industri / Thales Defence', 'OT_RADAR', 'OT', 'QUARANTINED', 'QUARANTINED', 20, '379254913a08284821ccb53b1611e97bc07154c21e661401eba6832f3a507fe9', 'ffad47ae3d187dd3725ff0eaa7a5672dcfe1795d11211cd87f96b678552339ca', 'CLOSED', 4, -7.2575, 112.7521, 'Pangkalan Radar Koarmada II Surabaya'),
-			('AST-OT-807', 'Radar Udara Lanud Adisutjipto Yogyakarta', 'SN-RDR-2026-X99', 'PT Len Industri / Thales Defence', 'OT_RADAR', 'OT', 'QUARANTINED', 'QUARANTINED', 15, '379254913a08284821ccb53b1611e97bc07154c21e661401eba6832f3a507fe9', '1f0badbbd01c58ce132e47fc8360271c014318d6b1781b2dfdee82d1d63f9431', 'CLOSED', 4, -7.7956, 110.3695, 'Radar Udara Lanud Adisutjipto Yogyakarta'),
-			('AST-OT-936', 'Radar Taktis Kodam IX Udayana Denpasar', 'SN-RDR-2026-X99', 'PT Len Industri / Thales Defence', 'OT_RADAR', 'OT', 'QUARANTINED', 'QUARANTINED', 15, '379254913a08284821ccb53b1611e97bc07154c21e661401eba6832f3a507fe9', 'd7f6e8d82cdd75ab8bf53b30ee7f08ce079a4a4260b8043e59ef3e767b99d9cc', 'CLOSED', 4, -8.6500, 115.2167, 'Radar Taktis Kodam IX Udayana Denpasar'),
-			('AST-OT-324', 'Tactical Sensor Node Natuna Terluar', 'SN-TAC-7968', 'PT Len', 'OT_RADAR', 'OT', 'QUARANTINED', 'QUARANTINED', 15, '021f27af0c4d03accc5a9f3871aba1e08f6eea38b1d1a9dfe8fb2cbeeb9fdc4b', 'OZIK-PASSPORT:AST-OT-324:021f27af0c4d03accc5a9f3871aba1e08f6eea38b1d1a9dfe8fb2cbeeb9fdc4b:PT Len:SN-TAC-7968', 'CLOSED', 4, 3.9456, 108.3897, 'Tactical Sensor Node Natuna Terluar'),
-			('AST-OT-921', 'Radar Pesisir Kodam XIII Merdeka Manado', 'SN-RDR-2026-X99', 'PT Len Industri / Thales Defence', 'OT_RADAR', 'OT', 'QUARANTINED', 'QUARANTINED', 15, '7bd48c99698cbed044f3316bb41ee233cff4d08b83a99ae37a8c923658c273c5', 'OZIK-PASSPORT:AST-OT-921:7bd48c99698cbed044f3316bb41ee233cff4d08b83a99ae37a8c923658c273c5:PT Len:SN-RDR-2026-X99', 'CLOSED', 4, 1.4748, 124.8428, 'Radar Pesisir Kodam XIII Merdeka Manado'),
-			('AST-OT-812', 'Stasiun Radar Koopsud II Makassar', 'SN-RDR-MKS-04', 'PT Len Industri', 'OT_RADAR', 'OT', 'COMPROMISED', 'COMPROMISED', 35, '8f9e0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f', '9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b', 'CLOSED', 3, -5.1477, 119.4327, 'Stasiun Radar Koopsud II Makassar'),
-			('AST-OT-743', 'Posko Radar Skouw Kodam XVII Papua', 'SN-RDR-PAP-09', 'PT Len Industri', 'OT_RADAR', 'OT', 'COMPROMISED', 'COMPROMISED', 30, '0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b', '1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c', 'CLOSED', 3, -2.5337, 140.7181, 'Posko Radar Skouw Kodam XVII Papua'),
-			('AST-OT-236', 'Drone Jammer Kodam I Bukit Barisan Medan', 'SN-JAM-2026-X77', 'PT Len Industri', 'OT_RADAR', 'OT', 'SECURE', 'SECURE', 95, 'd169ec49eba18b15a3e91e6296661ce3fc03999e261141114cf9b2b4a3d200eb', '16e6f3bf9714644762a64b29e8ec7c5eb456487e126cc7eef5a230645472065f', 'CLOSED', 0, 3.5952, 98.6722, 'Drone Jammer Kodam I Bukit Barisan Medan'),
-			('AST-OT-597', 'Pos Radar Khatulistiwa Pontianak', 'SN-JAM-2026-X77', 'PT Len Industri', 'OT_RADAR', 'OT', 'SECURE', 'SECURE', 95, 'd169ec49eba18b15a3e91e6296661ce3fc03999e261141114cf9b2b4a3d200eb', '0b534e099d3e227931469bbbc71730f6a309ee15f4b6e0e333a7bdf531e1135f', 'CLOSED', 0, -0.0263, 109.3425, 'Pos Radar Khatulistiwa Pontianak'),
-			('AST-OT-303', 'Terminal Komunikasi Korem Banjarmasin', 'SN-RDR-2026-X99', 'PT Len Industri / Thales Defence', 'OT_RADAR', 'OT', 'SECURE', 'SECURE', 95, '379254913a08284821ccb53b1611e97bc07154c21e661401eba6832f3a507fe9', '1192ef01291c45e4518ad43b0344ace527d49cace4dc74124feaa10a72ee5528', 'CLOSED', 0, -3.3167, 114.5900, 'Terminal Komunikasi Korem Banjarmasin'),
-			('AST-OT-797', 'Pos Sensor Maritim Teluk Bayur Padang', 'SN-RDR-2026-X99', 'PT Len Industri / Thales Defence', 'OT_RADAR', 'OT', 'SECURE', 'SECURE', 95, '379254913a08284821ccb53b1611e97bc07154c21e661401eba6832f3a507fe9', 'a8d54883a9a8b53e81d5d35ad7f17cefdd20adb3ef9d838a52a6e2ae68a31fec', 'CLOSED', 0, -0.9471, 100.4172, 'Pos Sensor Maritim Teluk Bayur Padang'),
-			('AST-OT-119', 'Node Relai Selat Sunda Bakauheni', 'SN-REL-2026-B01', 'PT Len Industri', 'OT_RADAR', 'OT', 'SECURE', 'SECURE', 94, '2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d', '3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e', 'CLOSED', 0, -5.4500, 105.2667, 'Node Relai Selat Sunda Bakauheni'),
-			('AST-OT-614', 'Sensor Monitoring ALKI Ambon', 'SN-ALKI-2026-A01', 'PT Len Industri', 'OT_RADAR', 'OT', 'STANDBY', 'STANDBY', 90, '4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f', '5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a', 'CLOSED', 0, -3.6958, 128.1831, 'Sensor Monitoring ALKI Ambon'),
-			('AST-OT-628', 'Pos Pengamatan Rote Kupang', 'SN-OBS-2026-K01', 'PT Len Industri', 'OT_RADAR', 'OT', 'STANDBY', 'STANDBY', 90, '6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b', '7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c', 'CLOSED', 0, -10.1772, 123.6070, 'Pos Pengamatan Rote Kupang'),
-			('AST-OT-635', 'Radar Pengintai Pasmar 3 Sorong', 'SN-RDR-2026-S03', 'PT Len Industri', 'OT_RADAR', 'OT', 'STANDBY', 'STANDBY', 91, '8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d', '9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e', 'CLOSED', 0, -0.9167, 131.2500, 'Radar Pengintai Pasmar 3 Sorong'),
-			('AST-OT-642', 'Sensor Telemetri Gorontalo', 'SN-TEL-2026-G01', 'PT Len Industri', 'OT_RADAR', 'OT', 'STANDBY', 'STANDBY', 92, '0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f', '1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a', 'CLOSED', 0, 0.5333, 123.0667, 'Sensor Telemetri Gorontalo'),
-			('AST-OT-651', 'Stasiun Selat Malaka Tanjung Pinang', 'SN-MLK-2026-T01', 'PT Len Industri', 'OT_RADAR', 'OT', 'STANDBY', 'STANDBY', 93, '2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b', '3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c', 'CLOSED', 0, 0.9000, 104.4500, 'Stasiun Selat Malaka Tanjung Pinang'),
-			('AST-OT-660', 'Pos Taktis Selat Lombok Mataram', 'SN-LMK-2026-M01', 'PT Len Industri', 'OT_RADAR', 'OT', 'STANDBY', 'STANDBY', 91, '4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d', '5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e', 'CLOSED', 0, -8.5833, 116.1167, 'Pos Taktis Selat Lombok Mataram')
-		ON CONFLICT (id) DO UPDATE SET
-			latitude = EXCLUDED.latitude,
-			longitude = EXCLUDED.longitude,
-			location_name = EXCLUDED.location_name,
-			integrity_state = EXCLUDED.integrity_state,
-			status = EXCLUDED.status,
-			qr_window_status = EXCLUDED.qr_window_status,
-			trust_score = EXCLUDED.trust_score;`,
+		`ALTER TABLE assets ADD COLUMN IF NOT EXISTS owner_id VARCHAR(255) DEFAULT '';`,
+		`ALTER TABLE telemetry_logs ADD COLUMN IF NOT EXISTS owner_id VARCHAR(255) DEFAULT '';`,
+		`ALTER TABLE telemetry_events ADD COLUMN IF NOT EXISTS owner_id VARCHAR(255) DEFAULT '';`,
+		`ALTER TABLE telemetry_correlations ADD COLUMN IF NOT EXISTS owner_id VARCHAR(255) DEFAULT '';`,
+		`ALTER TABLE ledger_entries ADD COLUMN IF NOT EXISTS owner_id VARCHAR(255) DEFAULT '';`,
+		`ALTER TABLE audit_ledger ADD COLUMN IF NOT EXISTS owner_id VARCHAR(255) DEFAULT '';`,
+		`ALTER TABLE maintenance_windows ADD COLUMN IF NOT EXISTS owner_id VARCHAR(255) DEFAULT '';`,
+		`DELETE FROM assets WHERE COALESCE(owner_id, '') = '';`,
+		`DELETE FROM telemetry_correlations WHERE COALESCE(owner_id, '') = '';`,
+		`DELETE FROM telemetry_logs WHERE COALESCE(owner_id, '') = '';`,
+		`DELETE FROM ledger_entries WHERE COALESCE(owner_id, '') = '';`,
 		`ALTER TABLE IF EXISTS assets ENABLE ROW LEVEL SECURITY;`,
 		`ALTER TABLE IF EXISTS audit_ledger ENABLE ROW LEVEL SECURITY;`,
 		`ALTER TABLE IF EXISTS cve_vulnerabilities ENABLE ROW LEVEL SECURITY;`,
@@ -272,12 +245,20 @@ func (r *Repository) migrate() {
 // Assets
 // ----------------------------------------------------------------------------
 
-func (r *Repository) GetAssets(criticalOnly bool, limit, offset int) ([]models.Asset, int, error) {
+func (r *Repository) GetAssets(criticalOnly bool, limit, offset int, ownerID ...string) ([]models.Asset, int, error) {
+	owner := ""
+	if len(ownerID) > 0 {
+		owner = strings.TrimSpace(ownerID[0])
+	}
+
 	if r.db == nil {
 		r.memLock.RLock()
 		defer r.memLock.RUnlock()
 		var res []models.Asset
 		for _, a := range r.memAssets {
+			if owner != "" && !strings.EqualFold(a.OwnerID, owner) {
+				continue
+			}
 			if criticalOnly && !(a.IntegrityState == models.StateCompromised || a.IntegrityState == models.StateQuarantined || a.QRWindowStatus == models.WindowOpen) {
 				continue
 			}
@@ -293,20 +274,34 @@ func (r *Repository) GetAssets(criticalOnly bool, limit, offset int) ([]models.A
 		return res, total, nil
 	}
 
-	var whereClause string
+	var conditions []string
+	var args []interface{}
+	argIdx := 1
+
 	if criticalOnly {
-		whereClause = "WHERE a.integrity_state IN ('COMPROMISED', 'QUARANTINED') OR a.qr_window_status = 'OPEN'"
+		conditions = append(conditions, "(a.integrity_state IN ('COMPROMISED', 'QUARANTINED') OR a.qr_window_status = 'OPEN')")
+	}
+	if owner != "" {
+		conditions = append(conditions, fmt.Sprintf("LOWER(COALESCE(a.owner_id, '')) = LOWER($%d)", argIdx))
+		args = append(args, owner)
+		argIdx++
+	}
+
+	whereClause := ""
+	if len(conditions) > 0 {
+		whereClause = "WHERE " + strings.Join(conditions, " AND ")
 	}
 
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM assets a %s", whereClause)
 	var total int
-	_ = r.db.QueryRow(countQuery).Scan(&total)
+	_ = r.db.QueryRow(countQuery, args...).Scan(&total)
 
 	query := fmt.Sprintf(`
 		SELECT a.id, a.name, a.serial_number, a.vendor, a.type, a.classification,
 		       a.status, a.integrity_state, a.trust_score, a.firmware_hash, a.qr_hash,
 		       a.qr_window_status, a.cve_count, a.registered_at,
-		       COALESCE(a.latitude, 0), COALESCE(a.longitude, 0), COALESCE(a.location_name, '')
+		       COALESCE(a.latitude, 0), COALESCE(a.longitude, 0), COALESCE(a.location_name, ''),
+		       COALESCE(a.owner_id, '')
 		FROM assets a
 		%s
 		ORDER BY a.created_at DESC
@@ -316,7 +311,7 @@ func (r *Repository) GetAssets(criticalOnly bool, limit, offset int) ([]models.A
 		query += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)
 	}
 
-	rows, err := r.db.Query(query)
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return []models.Asset{}, 0, err
 	}
@@ -329,13 +324,13 @@ func (r *Repository) GetAssets(criticalOnly bool, limit, offset int) ([]models.A
 		var regAt time.Time
 		var trustScore sql.NullInt64
 		var lat, lng float64
-		var locName string
+		var locName, ownID string
 
 		if err := rows.Scan(
 			&a.ID, &a.Name, &a.SerialNumber, &a.Vendor, &typeStr, &classStr,
 			&statusStr, &integStr, &trustScore, &a.FirmwareHash, &a.QRHash,
 			&winStr, &a.CVECount, &regAt,
-			&lat, &lng, &locName,
+			&lat, &lng, &locName, &ownID,
 		); err == nil {
 			a.Type = models.AssetType(typeStr)
 			a.Classification = models.AssetClassification(classStr)
@@ -353,6 +348,7 @@ func (r *Repository) GetAssets(criticalOnly bool, limit, offset int) ([]models.A
 				a.Longitude = &lng
 			}
 			a.LocationName = locName
+			a.OwnerID = ownID
 			a.RegisteredAt = regAt.Format(time.RFC3339)
 			result = append(result, a)
 		}
@@ -382,20 +378,21 @@ func (r *Repository) GetAssetByID(id string) (*models.Asset, bool) {
 	var regAt time.Time
 	var trustScore sql.NullInt64
 	var lat, lng float64
-	var locName string
+	var locName, ownID string
 
 	err := r.db.QueryRow(`
 		SELECT id, name, serial_number, vendor, type, classification,
 		       status, integrity_state, trust_score, firmware_hash, qr_hash,
 		       qr_window_status, cve_count, registered_at,
-		       COALESCE(latitude, 0), COALESCE(longitude, 0), COALESCE(location_name, '')
+		       COALESCE(latitude, 0), COALESCE(longitude, 0), COALESCE(location_name, ''),
+		       COALESCE(owner_id, '')
 		FROM assets
 		WHERE id = $1
 	`, id).Scan(
 		&a.ID, &a.Name, &a.SerialNumber, &a.Vendor, &typeStr, &classStr,
 		&statusStr, &integStr, &trustScore, &a.FirmwareHash, &a.QRHash,
 		&winStr, &a.CVECount, &regAt,
-		&lat, &lng, &locName,
+		&lat, &lng, &locName, &ownID,
 	)
 	if err != nil {
 		return nil, false
@@ -417,6 +414,7 @@ func (r *Repository) GetAssetByID(id string) (*models.Asset, bool) {
 		a.Longitude = &lng
 	}
 	a.LocationName = locName
+	a.OwnerID = ownID
 	a.RegisteredAt = regAt.Format(time.RFC3339)
 	return &a, true
 }
@@ -474,11 +472,18 @@ func (r *Repository) UpsertAsset(a models.Asset) error {
 	if a.TrustScore != nil {
 		trust = *a.TrustScore
 	}
+	var lat, lng float64
+	if a.Latitude != nil {
+		lat = *a.Latitude
+	}
+	if a.Longitude != nil {
+		lng = *a.Longitude
+	}
 
 	if r.db != nil {
 		_, err := r.db.Exec(`
-			INSERT INTO assets (id, name, serial_number, vendor, type, classification, status, integrity_state, trust_score, firmware_hash, qr_hash, qr_window_status, cve_count, registered_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+			INSERT INTO assets (id, name, serial_number, vendor, type, classification, status, integrity_state, trust_score, firmware_hash, qr_hash, qr_window_status, cve_count, latitude, longitude, location_name, owner_id, registered_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 			ON CONFLICT (id) DO UPDATE SET
 				name = EXCLUDED.name,
 				vendor = EXCLUDED.vendor,
@@ -489,10 +494,14 @@ func (r *Repository) UpsertAsset(a models.Asset) error {
 				qr_hash = EXCLUDED.qr_hash,
 				qr_window_status = EXCLUDED.qr_window_status,
 				cve_count = EXCLUDED.cve_count,
+				latitude = CASE WHEN EXCLUDED.latitude != 0 THEN EXCLUDED.latitude ELSE assets.latitude END,
+				longitude = CASE WHEN EXCLUDED.longitude != 0 THEN EXCLUDED.longitude ELSE assets.longitude END,
+				location_name = CASE WHEN EXCLUDED.location_name != '' THEN EXCLUDED.location_name ELSE assets.location_name END,
+				owner_id = CASE WHEN EXCLUDED.owner_id != '' THEN EXCLUDED.owner_id ELSE assets.owner_id END,
 				updated_at = CURRENT_TIMESTAMP
 		`, a.ID, a.Name, a.SerialNumber, a.Vendor, string(a.Type), string(a.Classification),
 			string(a.IntegrityState), string(a.IntegrityState), trust, a.FirmwareHash,
-			a.QRHash, string(a.QRWindowStatus), a.CVECount)
+			a.QRHash, string(a.QRWindowStatus), a.CVECount, lat, lng, a.LocationName, a.OwnerID)
 		if err != nil {
 			log.Printf("[OZIK-DB] Error upserting asset %s: %v", a.ID, err)
 			return err
@@ -656,17 +665,24 @@ func (r *Repository) CheckActiveMaintenanceWindow(assetID string) (*models.Maint
 	return nil, false
 }
 
-func (r *Repository) GetTelemetryCorrelations(limit, offset int) ([]models.TelemetryCorrelation, int, error) {
-	return r.GetTelemetryCorrelationsWithFilter(limit, offset, "")
+func (r *Repository) GetTelemetryCorrelations(limit, offset int, ownerID ...string) ([]models.TelemetryCorrelation, int, error) {
+	return r.GetTelemetryCorrelationsWithFilter(limit, offset, "", ownerID...)
 }
 
-func (r *Repository) GetTelemetryCorrelationsWithFilter(limit, offset int, search string) ([]models.TelemetryCorrelation, int, error) {
+func (r *Repository) GetTelemetryCorrelationsWithFilter(limit, offset int, search string, ownerID ...string) ([]models.TelemetryCorrelation, int, error) {
+	owner := ""
+	if len(ownerID) > 0 {
+		owner = strings.TrimSpace(ownerID[0])
+	}
 	search = strings.TrimSpace(search)
 	if r.db == nil {
 		r.memLock.RLock()
 		defer r.memLock.RUnlock()
 		var filtered []models.TelemetryCorrelation
 		for _, c := range r.memCorrelations {
+			if owner != "" && !strings.EqualFold(c.OwnerID, owner) {
+				continue
+			}
 			if search != "" {
 				s := strings.ToLower(search)
 				if !strings.Contains(strings.ToLower(c.AssetID), s) &&
@@ -692,6 +708,12 @@ func (r *Repository) GetTelemetryCorrelationsWithFilter(limit, offset int, searc
 	var args []interface{}
 	argIdx := 1
 
+	if owner != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("LOWER(COALESCE(owner_id, '')) = LOWER($%d)", argIdx))
+		args = append(args, owner)
+		argIdx++
+	}
+
 	if search != "" {
 		pattern := "%" + search + "%"
 		whereClauses = append(whereClauses, fmt.Sprintf("(asset_id ILIKE $%d OR network_event ILIKE $%d OR verdict ILIKE $%d OR physical_authorization ILIKE $%d)", argIdx, argIdx, argIdx, argIdx))
@@ -709,7 +731,7 @@ func (r *Repository) GetTelemetryCorrelationsWithFilter(limit, offset int, searc
 	_ = r.db.QueryRow(countQuery, args...).Scan(&total)
 
 	query := fmt.Sprintf(`
-		SELECT id, timestamp, asset_id, network_event, physical_authorization, COALESCE(maintenance_window_id, ''), verdict
+		SELECT id, timestamp, asset_id, network_event, physical_authorization, COALESCE(maintenance_window_id, ''), verdict, COALESCE(owner_id, '')
 		FROM telemetry_correlations
 		%s
 		ORDER BY timestamp DESC
@@ -729,10 +751,11 @@ func (r *Repository) GetTelemetryCorrelationsWithFilter(limit, offset int, searc
 	for rows.Next() {
 		var c models.TelemetryCorrelation
 		var ts time.Time
-		var authStr string
-		if err := rows.Scan(&c.ID, &ts, &c.AssetID, &c.NetworkEvent, &authStr, &c.MaintenanceWindowID, &c.Verdict); err == nil {
+		var authStr, ownID string
+		if err := rows.Scan(&c.ID, &ts, &c.AssetID, &c.NetworkEvent, &authStr, &c.MaintenanceWindowID, &c.Verdict, &ownID); err == nil {
 			c.Timestamp = ts.Format(time.RFC3339)
 			c.PhysicalAuthorization = models.PhysicalAuthorization(authStr)
+			c.OwnerID = ownID
 			list = append(list, c)
 		}
 	}
@@ -745,9 +768,9 @@ func (r *Repository) GetTelemetryCorrelationsWithFilter(limit, offset int, searc
 func (r *Repository) InsertCorrelation(corr models.TelemetryCorrelation) error {
 	if r.db != nil {
 		_, err := r.db.Exec(`
-			INSERT INTO telemetry_correlations (id, timestamp, asset_id, network_event, physical_authorization, maintenance_window_id, verdict)
-			VALUES ($1, CURRENT_TIMESTAMP, $2, $3, $4, $5, $6)
-		`, corr.ID, corr.AssetID, corr.NetworkEvent, string(corr.PhysicalAuthorization), corr.MaintenanceWindowID, corr.Verdict)
+			INSERT INTO telemetry_correlations (id, timestamp, asset_id, network_event, physical_authorization, maintenance_window_id, verdict, owner_id)
+			VALUES ($1, CURRENT_TIMESTAMP, $2, $3, $4, $5, $6, $7)
+		`, corr.ID, corr.AssetID, corr.NetworkEvent, string(corr.PhysicalAuthorization), corr.MaintenanceWindowID, corr.Verdict, corr.OwnerID)
 		if err != nil {
 			log.Printf("[OZIK-DB] Error inserting correlation: %v", err)
 		}
@@ -767,26 +790,44 @@ func (r *Repository) InsertCorrelation(corr models.TelemetryCorrelation) error {
 // Audit Ledger (Cryptographic SHA-256 Hash Chained)
 // ----------------------------------------------------------------------------
 
-func (r *Repository) AppendLedger(actor, action, assetID, payload string) (*models.LedgerEntry, error) {
+func (r *Repository) AppendLedger(actor, action, assetID, payload string, ownerID ...string) (*models.LedgerEntry, error) {
+	owner := ""
+	if len(ownerID) > 0 {
+		owner = strings.TrimSpace(ownerID[0])
+	}
 	prevHash := "0000000000000000000000000000000000000000000000000000000000000000"
 	index := 0
 
 	if r.db != nil {
 		var lastHash string
 		var lastIndex int
-		err := r.db.QueryRow(`
-			SELECT index, hash FROM ledger_entries ORDER BY index DESC LIMIT 1
-		`).Scan(&lastIndex, &lastHash)
+		var err error
+		if owner != "" {
+			err = r.db.QueryRow(`
+				SELECT index, hash FROM ledger_entries WHERE LOWER(COALESCE(owner_id, '')) = LOWER($1) ORDER BY index DESC LIMIT 1
+			`, owner).Scan(&lastIndex, &lastHash)
+		} else {
+			err = r.db.QueryRow(`
+				SELECT index, hash FROM ledger_entries ORDER BY index DESC LIMIT 1
+			`).Scan(&lastIndex, &lastHash)
+		}
 		if err == nil {
 			prevHash = lastHash
-			index = lastIndex + 1
+		}
+		var maxIndex int
+		if errMax := r.db.QueryRow(`SELECT COALESCE(MAX(index), -1) FROM ledger_entries`).Scan(&maxIndex); errMax == nil {
+			index = maxIndex + 1
 		}
 	} else {
 		r.memLock.RLock()
 		if len(r.memLedger) > 0 {
-			last := r.memLedger[len(r.memLedger)-1]
-			prevHash = last.Hash
-			index = last.Index + 1
+			for i := len(r.memLedger) - 1; i >= 0; i-- {
+				if owner == "" || strings.EqualFold(r.memLedger[i].OwnerID, owner) {
+					prevHash = r.memLedger[i].Hash
+					break
+				}
+			}
+			index = r.memLedger[len(r.memLedger)-1].Index + 1
 		}
 		r.memLock.RUnlock()
 	}
@@ -804,20 +845,21 @@ func (r *Repository) AppendLedger(actor, action, assetID, payload string) (*mode
 		PayloadHash:  payloadHash,
 		PreviousHash: prevHash,
 		Hash:         currHash,
+		OwnerID:      owner,
 	}
 
 	if r.db != nil {
 		_, _ = r.db.Exec(`
-			INSERT INTO ledger_entries (index, timestamp, actor, action, asset_id, payload_hash, previous_hash, hash)
-			VALUES ($1, CURRENT_TIMESTAMP, $2, $3, $4, $5, $6, $7)
-		`, entry.Index, entry.Actor, entry.Action, entry.AssetID, entry.PayloadHash, entry.PreviousHash, entry.Hash)
+			INSERT INTO ledger_entries (index, timestamp, actor, action, asset_id, payload_hash, previous_hash, hash, owner_id)
+			VALUES ($1, CURRENT_TIMESTAMP, $2, $3, $4, $5, $6, $7, $8)
+		`, entry.Index, entry.Actor, entry.Action, entry.AssetID, entry.PayloadHash, entry.PreviousHash, entry.Hash, owner)
 
-		payloadObj := map[string]interface{}{"raw": payload, "asset_id": assetID}
+		payloadObj := map[string]interface{}{"raw": payload, "asset_id": assetID, "owner_id": owner}
 		payloadBytes, _ := json.Marshal(payloadObj)
 		_, _ = r.db.Exec(`
-			INSERT INTO audit_ledger (prev_hash, current_hash, action, officer_id, payload_json, timestamp)
-			VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
-		`, prevHash, currHash, action, actor, string(payloadBytes))
+			INSERT INTO audit_ledger (prev_hash, current_hash, action, officer_id, payload_json, owner_id, timestamp)
+			VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+		`, prevHash, currHash, action, actor, string(payloadBytes), owner)
 	}
 
 	r.memLock.Lock()
@@ -827,34 +869,53 @@ func (r *Repository) AppendLedger(actor, action, assetID, payload string) (*mode
 	return entry, nil
 }
 
-func (r *Repository) GetLedger(limit, offset int) ([]models.LedgerEntry, int, error) {
+func (r *Repository) GetLedger(limit, offset int, ownerID ...string) ([]models.LedgerEntry, int, error) {
+	owner := ""
+	if len(ownerID) > 0 {
+		owner = strings.TrimSpace(ownerID[0])
+	}
 	if r.db == nil {
 		r.memLock.RLock()
 		defer r.memLock.RUnlock()
-		total := len(r.memLedger)
-		res := r.memLedger
-		if offset > 0 && offset < len(res) {
-			res = res[offset:]
+		var filtered []models.LedgerEntry
+		for i := len(r.memLedger) - 1; i >= 0; i-- {
+			e := r.memLedger[i]
+			if owner != "" && !strings.EqualFold(e.OwnerID, owner) {
+				continue
+			}
+			filtered = append(filtered, e)
 		}
-		if limit > 0 && len(res) > limit {
-			res = res[:limit]
+		total := len(filtered)
+		if offset > 0 && offset < len(filtered) {
+			filtered = filtered[offset:]
 		}
-		return res, total, nil
+		if limit > 0 && len(filtered) > limit {
+			filtered = filtered[:limit]
+		}
+		return filtered, total, nil
+	}
+
+	var whereSQL string
+	var args []interface{}
+	if owner != "" {
+		whereSQL = "WHERE LOWER(COALESCE(owner_id, '')) = LOWER($1)"
+		args = append(args, owner)
 	}
 
 	var total int
-	_ = r.db.QueryRow(`SELECT COUNT(*) FROM ledger_entries`).Scan(&total)
+	_ = r.db.QueryRow(fmt.Sprintf(`SELECT COUNT(*) FROM ledger_entries %s`, whereSQL), args...).Scan(&total)
 
-	query := `
-		SELECT index, timestamp, actor, action, COALESCE(asset_id, ''), payload_hash, previous_hash, hash
+	query := fmt.Sprintf(`
+		SELECT index, timestamp, actor, action, COALESCE(asset_id, ''), payload_hash, previous_hash, hash, COALESCE(owner_id, '')
 		FROM ledger_entries
+		%s
 		ORDER BY index DESC
-	`
+	`, whereSQL)
 	if limit > 0 {
 		query += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)
 	}
 
-	rows, err := r.db.Query(query)
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return []models.LedgerEntry{}, 0, err
 	}
@@ -864,7 +925,7 @@ func (r *Repository) GetLedger(limit, offset int) ([]models.LedgerEntry, int, er
 	for rows.Next() {
 		var e models.LedgerEntry
 		var ts time.Time
-		if err := rows.Scan(&e.Index, &ts, &e.Actor, &e.Action, &e.AssetID, &e.PayloadHash, &e.PreviousHash, &e.Hash); err == nil {
+		if err := rows.Scan(&e.Index, &ts, &e.Actor, &e.Action, &e.AssetID, &e.PayloadHash, &e.PreviousHash, &e.Hash, &e.OwnerID); err == nil {
 			e.Timestamp = ts.Format(time.RFC3339)
 			list = append(list, e)
 		}
@@ -875,8 +936,8 @@ func (r *Repository) GetLedger(limit, offset int) ([]models.LedgerEntry, int, er
 	return list, total, nil
 }
 
-func (r *Repository) VerifyLedgerIntegrity() (bool, int, int) {
-	ledger, _, err := r.GetLedger(0, 0)
+func (r *Repository) VerifyLedgerIntegrity(ownerID ...string) (bool, int, int) {
+	ledger, _, err := r.GetLedger(0, 0, ownerID...)
 	if err != nil || len(ledger) == 0 {
 		return true, 0, 0
 	}

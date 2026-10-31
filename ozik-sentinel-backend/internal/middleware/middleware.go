@@ -39,8 +39,8 @@ func (m *Middleware) DynamicCORS() gin.HandlerFunc {
 		}
 
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, PATCH")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Officer-Token, X-Simulated-Role, X-Officer-Email, X-Requested-With, Accept, Origin")
-		c.Writer.Header().Set("Access-Control-Expose-Headers", "Content-Length, Content-Disposition")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Officer-Token, X-Simulated-Role, X-Officer-Email, X-Officer-ID, X-Requested-With, Accept, Origin")
+		c.Writer.Header().Set("Access-Control-Expose-Headers", "Content-Length, Content-Disposition, X-Total-Count")
 		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
 
 		if c.Request.Method == "OPTIONS" {
@@ -162,14 +162,22 @@ func (m *Middleware) TacticalAuth() gin.HandlerFunc {
 		}
 
 		// 3. Fallback for unauthenticated requests with simulated role or email lookup
-		officerEmail := c.GetHeader("X-Officer-Email")
+		officerEmail := strings.ToLower(strings.TrimSpace(c.GetHeader("X-Officer-Email")))
+		officerIDHeader := strings.TrimSpace(c.GetHeader("X-Officer-ID"))
 		if officerEmail == "" && strings.Contains(rawToken, "@") {
-			officerEmail = rawToken
+			officerEmail = strings.ToLower(strings.TrimSpace(rawToken))
 		}
 
 		if simulatedRole != "" {
 			c.Set("role", models.TacticalRole(strings.ToUpper(simulatedRole)))
-			c.Set("officer_id", "officer-"+simulatedRole)
+			if officerEmail != "" {
+				c.Set("email", officerEmail)
+				c.Set("officer_id", officerEmail)
+			} else if officerIDHeader != "" {
+				c.Set("officer_id", officerIDHeader)
+			} else {
+				c.Set("officer_id", "officer-"+simulatedRole)
+			}
 		} else if officerEmail != "" {
 			off, err := m.repo.FindOfficerByEmail(officerEmail)
 			if err == nil && off != nil {
@@ -179,8 +187,12 @@ func (m *Middleware) TacticalAuth() gin.HandlerFunc {
 				c.Set("email", off.Email)
 			} else {
 				c.Set("role", models.RoleCommander)
-				c.Set("officer_id", "officer-"+officerEmail)
+				c.Set("officer_id", officerEmail)
+				c.Set("email", officerEmail)
 			}
+		} else if officerIDHeader != "" {
+			c.Set("role", models.RoleCommander)
+			c.Set("officer_id", officerIDHeader)
 		} else {
 			c.Set("role", models.RoleCommander)
 			c.Set("officer_id", "commander-station")

@@ -67,7 +67,7 @@ func (h *Handlers) RegisterRoutes(r *gin.Engine, mw *middleware.Middleware) {
 			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		}
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, PATCH")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Officer-Token, X-Simulated-Role, X-Officer-Email, X-Requested-With, Accept, Origin")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Officer-Token, X-Simulated-Role, X-Officer-Email, X-Officer-ID, X-Requested-With, Accept, Origin")
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(http.StatusNoContent)
@@ -92,10 +92,10 @@ func (h *Handlers) RegisterRoutes(r *gin.Engine, mw *middleware.Middleware) {
 	r.GET("/assets", h.HandleGetAssets)
 	r.GET("/telemetry/stream", h.HandleGetTelemetryStream)
 	r.POST("/telemetry/test-event", h.HandleTriggerTestTelemetry)
-	r.POST("/siem/check-in", mw.TacticalAuth(), middleware.RequireRole(models.RoleSuperAdmin, models.RoleCommander, models.RoleOTTechnician), h.HandleSIEMCheckIn)
+	r.POST("/siem/check-in", mw.TacticalAuth(), middleware.RequireRole(models.RoleSuperAdmin, models.RoleCommander, models.RoleOTTechnician, models.RoleLogisticsOfficer), h.HandleSIEMCheckIn)
 	r.GET("/siem/correlations", h.HandleGetCorrelations)
 	r.GET("/siem/topology", h.HandleGetTopology)
-	r.POST("/gatekeeper/verify", mw.TacticalAuth(), middleware.RequireRole(models.RoleSuperAdmin, models.RoleLogisticsOfficer), h.HandleSupplyChainVerify)
+	r.POST("/gatekeeper/verify", mw.TacticalAuth(), middleware.RequireRole(models.RoleSuperAdmin, models.RoleLogisticsOfficer, models.RoleCommander), h.HandleSupplyChainVerify)
 	r.POST("/forensics/investigate", mw.TacticalAuth(), middleware.RequireRole(models.RoleSuperAdmin, models.RoleCommander, models.RoleForensicAuditor), h.HandleForensicInvestigate)
 	r.POST("/forensics/isolate", mw.TacticalAuth(), middleware.RequireRole(models.RoleSuperAdmin, models.RoleCommander), h.HandleForensicIsolate)
 	r.GET("/forensics/:id/report", mw.TacticalAuth(), middleware.RequireRole(models.RoleSuperAdmin, models.RoleCommander, models.RoleForensicAuditor), h.HandleExportForensicReport)
@@ -125,13 +125,13 @@ func (h *Handlers) RegisterRoutes(r *gin.Engine, mw *middleware.Middleware) {
 		v1.POST("/auth/simulate-role", h.HandleSimulateRole)
 		v1.PATCH("/admin/users/:id/role", mw.TacticalAuth(), middleware.RequireRole(models.RoleSuperAdmin), h.HandleUpdateUserRole)
 
-		// Phase 1: Supply Chain Gatekeeper (Strictly LOGISTICS_OFFICER & SUPER_ADMIN)
-		v1.POST("/supply-chain/verify", mw.TacticalAuth(), middleware.RequireRole(models.RoleSuperAdmin, models.RoleLogisticsOfficer), h.HandleSupplyChainVerify)
+		// Phase 1: Supply Chain Gatekeeper
+		v1.POST("/supply-chain/verify", mw.TacticalAuth(), middleware.RequireRole(models.RoleSuperAdmin, models.RoleLogisticsOfficer, models.RoleCommander), h.HandleSupplyChainVerify)
 		v1.GET("/supply-chain/passport/:assetId/export", h.HandleExportQRPassport)
-		v1.POST("/assets/register", mw.TacticalAuth(), middleware.RequireRole(models.RoleSuperAdmin, models.RoleLogisticsOfficer), h.HandleSupplyChainVerify)
+		v1.POST("/assets/register", mw.TacticalAuth(), middleware.RequireRole(models.RoleSuperAdmin, models.RoleLogisticsOfficer, models.RoleCommander), h.HandleSupplyChainVerify)
 
 		// Phase 2: Live SIEM & Zero-Trust QR Check-In
-		v1.POST("/siem/qr-checkin", mw.TacticalAuth(), middleware.RequireRole(models.RoleSuperAdmin, models.RoleCommander, models.RoleOTTechnician), h.HandleSIEMCheckIn)
+		v1.POST("/siem/qr-checkin", mw.TacticalAuth(), middleware.RequireRole(models.RoleSuperAdmin, models.RoleCommander, models.RoleOTTechnician, models.RoleLogisticsOfficer), h.HandleSIEMCheckIn)
 		v1.POST("/siem/telemetry", h.HandleSIEMTelemetry)
 		v1.GET("/siem/telemetry", h.HandleGetCorrelations)
 		v1.GET("/siem/telemetry/:asset_id/latest", h.HandleGetAssetLatestTelemetry)
@@ -198,11 +198,92 @@ func (h *Handlers) HandleRootGateway(c *gin.Context) {
 }
 
 // ----------------------------------------------------------------------------
+// Per-User Session / Owner Resolution Helper
+// ----------------------------------------------------------------------------
+
+func (h *Handlers) getRequestOwnerID(c *gin.Context) string {
+	if email := strings.TrimSpace(c.GetString("email")); email != "" && email != "evaluator.pussiberad@tni-ad.mil.id" {
+		return strings.ToLower(email)
+	}
+	if headerEmail := strings.TrimSpace(c.GetHeader("X-Officer-Email")); headerEmail != "" {
+		return strings.ToLower(headerEmail)
+	}
+	if headerID := strings.TrimSpace(c.GetHeader("X-Officer-ID")); headerID != "" {
+		return strings.ToLower(headerID)
+	}
+	if offID := strings.TrimSpace(c.GetString("officer_id")); offID != "" && offID != "officer-evaluator" && offID != "simulated-session" {
+		return strings.ToLower(offID)
+	}
+	if qOwner := strings.TrimSpace(c.Query("owner_id")); qOwner != "" {
+		return strings.ToLower(qOwner)
+	}
+	if qOwner := strings.TrimSpace(c.Query("ownerId")); qOwner != "" {
+		return strings.ToLower(qOwner)
+	}
+
+	// Also inspect Bearer / X-Officer-Token on public GET endpoints
+	rawToken := strings.TrimSpace(c.GetHeader("X-Officer-Token"))
+	if rawToken == "" {
+		authHeader := strings.TrimSpace(c.GetHeader("Authorization"))
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			rawToken = strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+		}
+	}
+	if rawToken == "" {
+		if cookieToken, err := c.Cookie("ozik_token"); err == nil {
+			rawToken = strings.TrimSpace(cookieToken)
+		}
+	}
+	if rawToken != "" && h.mw != nil {
+		if claims, err := h.mw.VerifyMilitaryToken(rawToken); err == nil && claims != nil {
+			if claims.Email != "" && claims.Email != "evaluator.pussiberad@tni-ad.mil.id" {
+				return strings.ToLower(claims.Email)
+			}
+			if claims.Sub != "" && claims.Sub != "officer-evaluator" {
+				return strings.ToLower(claims.Sub)
+			}
+		}
+	}
+	if email := strings.TrimSpace(c.GetString("email")); email != "" {
+		return strings.ToLower(email)
+	}
+
+	return "isolated-default-session"
+}
+
+func resolveTacticalCoordinates(seed string) (float64, float64, string) {
+	bases := []struct {
+		Lat  float64
+		Lng  float64
+		Name string
+	}{
+		{-6.3150, 106.8850, "Mabesad / PUSSIBERAD Command Node — Jakarta"},
+		{-6.8900, 107.6100, "Pussenif / PT Pindad Defense Hub — Bandung"},
+		{-7.2575, 112.7521, "Kodam V/Brawijaya Tactical Node — Surabaya"},
+		{3.9200, 108.3800, "Pangkalan Terpadu Natuna Utara — Kepulauan Riau"},
+		{-1.2379, 116.8529, "Satuan Pertahanan IKN Nusantara — Kalimantan Timur"},
+		{-5.1477, 119.4327, "Kodam XIV/Hasanuddin Radar Sector — Makassar"},
+		{-2.5330, 140.7170, "Kodam XVII/Cenderawasih Eastern Node — Jayapura"},
+		{3.5952, 98.6722, "Kodam I/Bukit Barisan Relay Station — Medan"},
+	}
+	sum := 0
+	for _, ch := range seed {
+		sum += int(ch)
+	}
+	chosen := bases[sum%len(bases)]
+	// Add tiny deterministic offset so multiple assets in the same sector don't overlap on the map
+	jitterLat := float64((sum%17)-8) * 0.008
+	jitterLng := float64(((sum/3)%17)-8) * 0.008
+	return chosen.Lat + jitterLat, chosen.Lng + jitterLng, chosen.Name
+}
+
+// ----------------------------------------------------------------------------
 // Metrics & Dashboard
 // ----------------------------------------------------------------------------
 
 func (h *Handlers) HandleGetMetrics(c *gin.Context) {
-	assets, totalAssets, _ := h.repo.GetAssets(false, 0, 0)
+	ownerID := h.getRequestOwnerID(c)
+	assets, totalAssets, _ := h.repo.GetAssets(false, 0, 0, ownerID)
 	quarantined := 0
 	activeWindows := 0
 
@@ -215,7 +296,7 @@ func (h *Handlers) HandleGetMetrics(c *gin.Context) {
 		}
 	}
 
-	correlations, _, _ := h.repo.GetTelemetryCorrelations(50, 0)
+	correlations, _, _ := h.repo.GetTelemetryCorrelations(50, 0, ownerID)
 	anomalies := 0
 	for _, corr := range correlations {
 		if corr.Verdict == "ANOMALY" {
@@ -236,10 +317,13 @@ func (h *Handlers) HandleGetMetrics(c *gin.Context) {
 // ----------------------------------------------------------------------------
 
 func (h *Handlers) HandleSupplyChainVerify(c *gin.Context) {
+	ownerID := h.getRequestOwnerID(c)
 	assetName := c.PostForm("assetName")
 	serialNumber := c.PostForm("serialNumber")
 	vendor := c.PostForm("vendor")
 	assetType := c.PostForm("assetType")
+	docText := c.PostForm("manifestText")
+	sbomText := c.PostForm("sbomText")
 
 	// Also support JSON body payload if not multipart
 	if assetName == "" {
@@ -248,12 +332,20 @@ func (h *Handlers) HandleSupplyChainVerify(c *gin.Context) {
 			SerialNumber string `json:"serialNumber"`
 			Vendor       string `json:"vendor"`
 			AssetType    string `json:"assetType"`
+			ManifestText string `json:"manifestText"`
+			SBOMText     string `json:"sbomText"`
 		}
 		if err := c.ShouldBindJSON(&req); err == nil {
 			assetName = req.AssetName
 			serialNumber = req.SerialNumber
 			vendor = req.Vendor
 			assetType = req.AssetType
+			if req.ManifestText != "" {
+				docText = req.ManifestText
+			}
+			if req.SBOMText != "" {
+				sbomText = req.SBOMText
+			}
 		}
 	}
 
@@ -271,7 +363,6 @@ func (h *Handlers) HandleSupplyChainVerify(c *gin.Context) {
 	}
 
 	// Read optional uploaded files
-	var docText, sbomText string
 	if mf, err := c.FormFile("manifest"); err == nil {
 		if f, err := mf.Open(); err == nil {
 			b, _ := io.ReadAll(f)
@@ -314,7 +405,7 @@ func (h *Handlers) HandleSupplyChainVerify(c *gin.Context) {
 	firmwareHash := fmt.Sprintf("%x", sha256.Sum256([]byte(serialNumber+vendor+"FW_BASELINE")))
 	rawPayload, signature := h.hmacQR.CreateTacticalQRPayload(assetID, firmwareHash, vendor, serialNumber)
 	issuedTimestamp := time.Now().Format("2006-01-02 15:04:05")
-	verifyURL := fmt.Sprintf("https://ozikra.vercel.app/verify?id=%s&sig=%s&ts=%s&vendor=%s&status=%s",
+	verifyURL := fmt.Sprintf("https://oziksentinel.biz.id/verify?id=%s&sig=%s&ts=%s&vendor=%s&status=%s",
 		url.QueryEscape(assetID),
 		url.QueryEscape(signature),
 		url.QueryEscape(issuedTimestamp),
@@ -335,11 +426,13 @@ func (h *Handlers) HandleSupplyChainVerify(c *gin.Context) {
 		FirmwareHash: firmwareHash,
 	}
 
-	// Persist to Supabase Assets Table
+	// Persist to Supabase Assets Table scoped to this user
 	integrityState := models.StateSecure
 	if analysis.Verdict == "QUARANTINED" {
 		integrityState = models.StateQuarantined
 	}
+
+	lat, lng, locName := resolveTacticalCoordinates(serialNumber + assetName + ownerID)
 
 	newAsset := models.Asset{
 		ID:             assetID,
@@ -354,6 +447,10 @@ func (h *Handlers) HandleSupplyChainVerify(c *gin.Context) {
 		QRHash:         rawPayload,
 		FirmwareHash:   firmwareHash,
 		CVECount:       len(analysis.CVEMatches),
+		Latitude:       &lat,
+		Longitude:      &lng,
+		LocationName:   locName,
+		OwnerID:        ownerID,
 		RegisteredAt:   time.Now().Format(time.RFC3339),
 	}
 	_ = h.repo.UpsertAsset(newAsset)
@@ -363,14 +460,15 @@ func (h *Handlers) HandleSupplyChainVerify(c *gin.Context) {
 	if off, exists := c.Get("officer_id"); exists {
 		actor = fmt.Sprintf("%v", off)
 	}
-	_, _ = h.repo.AppendLedger(actor, "GATEKEEPER_SEAL_ISSUED", assetID, fmt.Sprintf("SCORE:%d:STATUS:%s", analysis.TrustScore, analysis.Verdict))
+	_, _ = h.repo.AppendLedger(actor, "GATEKEEPER_SEAL_ISSUED", assetID, fmt.Sprintf("SCORE:%d:STATUS:%s", analysis.TrustScore, analysis.Verdict), ownerID)
 
 	c.JSON(http.StatusOK, analysis)
 }
 
 func (h *Handlers) HandleExportQRPassport(c *gin.Context) {
 	assetID := c.Param("assetId")
-	assets, _, _ := h.repo.GetAssets(false, 0, 0)
+	ownerID := h.getRequestOwnerID(c)
+	assets, _, _ := h.repo.GetAssets(false, 0, 0, ownerID)
 
 	for _, a := range assets {
 		if a.ID == assetID {
@@ -394,6 +492,7 @@ func (h *Handlers) HandleExportQRPassport(c *gin.Context) {
 // ----------------------------------------------------------------------------
 
 func (h *Handlers) HandleSIEMCheckIn(c *gin.Context) {
+	ownerID := h.getRequestOwnerID(c)
 	var body struct {
 		AssetQRHash  string `json:"assetQrHash"`
 		TechnicianID string `json:"technicianId"`
@@ -412,17 +511,43 @@ func (h *Handlers) HandleSIEMCheckIn(c *gin.Context) {
 		body.TechnicianID = "Sgt. Pratama (NRP 310892)"
 	}
 
-	// Verify HMAC-SHA256 signature against SERVER_HMAC_SECRET
+	// Match against user's own assets first
 	targetAssetID := ""
-	assets, _, _ := h.repo.GetAssets(false, 0, 0)
+	assets, _, _ := h.repo.GetAssets(false, 0, 0, ownerID)
 	for _, a := range assets {
-		if a.QRHash == body.AssetQRHash || strings.Contains(body.AssetQRHash, a.ID) {
+		if a.QRHash == body.AssetQRHash || strings.Contains(body.AssetQRHash, a.ID) || strings.Contains(body.AssetQRHash, a.SerialNumber) {
 			targetAssetID = a.ID
 			break
 		}
 	}
+	if targetAssetID == "" && len(assets) > 0 {
+		targetAssetID = assets[0].ID
+	}
 	if targetAssetID == "" {
-		targetAssetID = "AST-RADAR-01"
+		// Create a user-scoped tactical node on the fly so check-in always links to a real asset owned by this user
+		score := 96
+		lat, lng, locName := resolveTacticalCoordinates(body.AssetQRHash + ownerID)
+		targetAssetID = fmt.Sprintf("AST-OT-%03d", rand.Intn(900)+100)
+		autoAsset := models.Asset{
+			ID:             targetAssetID,
+			Name:           "Unit Radar Pertahanan Lapangan (" + targetAssetID + ")",
+			SerialNumber:   fmt.Sprintf("SN-FLD-%04d", rand.Intn(9000)+1000),
+			Vendor:         "PT Len Industri (Persero)",
+			Type:           models.TypeOTRadar,
+			Classification: models.ClassificationOT,
+			TrustScore:     &score,
+			IntegrityState: models.StateMaintenance,
+			QRWindowStatus: models.WindowOpen,
+			QRHash:         body.AssetQRHash,
+			FirmwareHash:   fmt.Sprintf("%x", sha256.Sum256([]byte(body.AssetQRHash))),
+			CVECount:       0,
+			Latitude:       &lat,
+			Longitude:      &lng,
+			LocationName:   locName,
+			OwnerID:        ownerID,
+			RegisteredAt:   time.Now().Format(time.RFC3339),
+		}
+		_ = h.repo.UpsertAsset(autoAsset)
 	}
 
 	// Insert 15-minute maintenance window in Supabase
@@ -437,7 +562,7 @@ func (h *Handlers) HandleSIEMCheckIn(c *gin.Context) {
 	if off, exists := c.Get("officer_id"); exists {
 		actor = fmt.Sprintf("%v", off)
 	}
-	_, _ = h.repo.AppendLedger(actor, "MAINTENANCE_WINDOW_OPENED", targetAssetID, fmt.Sprintf("WINDOW:%s:EXPIRES:%s", win.ID, win.ExpiresAt))
+	_, _ = h.repo.AppendLedger(actor, "MAINTENANCE_WINDOW_OPENED", targetAssetID, fmt.Sprintf("WINDOW:%s:EXPIRES:%s", win.ID, win.ExpiresAt), ownerID)
 
 	// Broadcast via SSE
 	h.siem.BroadcastSSE("MAINTENANCE_WINDOW_OPENED", win)
@@ -446,6 +571,7 @@ func (h *Handlers) HandleSIEMCheckIn(c *gin.Context) {
 }
 
 func (h *Handlers) HandleSIEMTelemetry(c *gin.Context) {
+	ownerID := h.getRequestOwnerID(c)
 	var body struct {
 		AssetID       string  `json:"asset_id"`
 		DeviceID      string  `json:"device_id"`
@@ -465,7 +591,12 @@ func (h *Handlers) HandleSIEMTelemetry(c *gin.Context) {
 		targetID = body.DeviceID
 	}
 	if targetID == "" {
-		targetID = "AST-RADAR-01"
+		assets, _, _ := h.repo.GetAssets(false, 1, 0, ownerID)
+		if len(assets) > 0 {
+			targetID = assets[0].ID
+		} else {
+			targetID = fmt.Sprintf("AST-OT-%03d", rand.Intn(900)+100)
+		}
 	}
 
 	verdict := h.siem.CorrelateTelemetry(services.TelemetryInput{
@@ -475,6 +606,7 @@ func (h *Handlers) HandleSIEMTelemetry(c *gin.Context) {
 		FirmwareHash:  body.FirmwareHash,
 		NetworkTxKbps: body.NetworkTxKbps,
 		QRHash:        body.QRHash,
+		OwnerID:       ownerID,
 	})
 
 	c.JSON(http.StatusOK, verdict)
@@ -511,7 +643,8 @@ func (h *Handlers) HandleSIEMStream(c *gin.Context) {
 }
 
 func (h *Handlers) HandleGetTelemetryStream(c *gin.Context) {
-	correlations, _, _ := h.repo.GetTelemetryCorrelations(20, 0)
+	ownerID := h.getRequestOwnerID(c)
+	correlations, _, _ := h.repo.GetTelemetryCorrelations(20, 0, ownerID)
 	var events []models.TelemetryEvent
 	for _, cr := range correlations {
 		sev := models.SeverityInfo
@@ -526,6 +659,7 @@ func (h *Handlers) HandleGetTelemetryStream(c *gin.Context) {
 			Severity:  sev,
 			Message:   cr.NetworkEvent,
 			Actor:     string(cr.PhysicalAuthorization),
+			OwnerID:   cr.OwnerID,
 		})
 	}
 	if events == nil {
@@ -535,26 +669,91 @@ func (h *Handlers) HandleGetTelemetryStream(c *gin.Context) {
 }
 
 func (h *Handlers) HandleTriggerTestTelemetry(c *gin.Context) {
+	ownerID := h.getRequestOwnerID(c)
+	assets, _, _ := h.repo.GetAssets(false, 0, 0, ownerID)
+
+	targetAssetID := ""
+	if len(assets) > 0 {
+		targetAssetID = assets[rand.Intn(len(assets))].ID
+	} else {
+		// Create a user-scoped tactical asset so the anomaly has a real node on this user's map & registry
+		score := 42
+		lat, lng, locName := resolveTacticalCoordinates(ownerID + fmt.Sprintf("%d", time.Now().UnixNano()))
+		targetAssetID = fmt.Sprintf("AST-OT-%03d", rand.Intn(900)+100)
+		rogueSamples := []struct {
+			Name   string
+			Vendor string
+			Type   models.AssetType
+		}{
+			{"Radio Taktis VHF Falcon III Manpack", "L3Harris / PT Len Industri", models.TypeTacticalRadio},
+			{"Radar Shikra Surveillance Arhanud", "Thales / PT Len Industri", models.TypeOTRadar},
+			{"Gateway Komando Taktis C4ISR", "PT Pindad / Defend ID", models.TypeITServer},
+			{"Modul Kendali Rudal Starstreak", "Thales Air Defence", models.TypeOTRadar},
+		}
+		picked := rogueSamples[rand.Intn(len(rogueSamples))]
+		class := models.ClassificationOT
+		if picked.Type == models.TypeITServer {
+			class = models.ClassificationIT
+		}
+		serial := fmt.Sprintf("SN-TAC-%04d", rand.Intn(9000)+1000)
+		fwHash := fmt.Sprintf("%x", sha256.Sum256([]byte(serial+picked.Vendor)))
+		newAsset := models.Asset{
+			ID:             targetAssetID,
+			Name:           picked.Name,
+			SerialNumber:   serial,
+			Vendor:         picked.Vendor,
+			Type:           picked.Type,
+			Classification: class,
+			TrustScore:     &score,
+			IntegrityState: models.StateCompromised,
+			QRWindowStatus: models.WindowClosed,
+			QRHash:         fmt.Sprintf("%x", sha256.Sum256([]byte(targetAssetID+ownerID))),
+			FirmwareHash:   fwHash,
+			CVECount:       2,
+			Latitude:       &lat,
+			Longitude:      &lng,
+			LocationName:   locName,
+			OwnerID:        ownerID,
+			RegisteredAt:   time.Now().Format(time.RFC3339),
+		}
+		_ = h.repo.UpsertAsset(newAsset)
+	}
+
+	tempC := 78.0 + float64(rand.Intn(180))/10.0
+	txKbps := 4800.0 + float64(rand.Intn(4500))
+	fwSignatures := []string{
+		"0xDEAD_BACKDOOR_V2",
+		"0xBADF00D_ROGUE_SPI",
+		"0x991A_UNAUTH_BOOT_MOD",
+		"0xCAFE_UNSIGNED_EEPROM",
+	}
+	chosenFW := fwSignatures[rand.Intn(len(fwSignatures))]
+
 	verdict := h.siem.CorrelateTelemetry(services.TelemetryInput{
-		AssetID:       "AST-RADIO-VHF",
-		TemperatureC:  86.4,
-		VoltageV:      29.8,
-		FirmwareHash:  "0xDEAD_BACKDOOR_V2",
-		NetworkTxKbps: 7200.0,
+		AssetID:       targetAssetID,
+		TemperatureC:  tempC,
+		VoltageV:      28.4 + float64(rand.Intn(30))/10.0,
+		FirmwareHash:  chosenFW,
+		NetworkTxKbps: txKbps,
+		OwnerID:       ownerID,
 	})
 
+	_, _ = h.repo.AppendLedger("SIEM_CORRELATOR", "ZERO_TRUST_ANOMALY_DETECTED", targetAssetID, fmt.Sprintf("FW:%s:TX:%.0fKBPS", chosenFW, txKbps), ownerID)
+
 	c.JSON(http.StatusOK, models.TelemetryEvent{
-		ID:        "TEL-ALERT-TEST",
+		ID:        fmt.Sprintf("TEL-ALERT-%d", time.Now().Unix()%100000),
 		Timestamp: time.Now().Format(time.RFC3339),
-		AssetID:   "AST-RADIO-VHF",
+		AssetID:   targetAssetID,
 		Source:    models.SourceFirmware,
 		Severity:  models.SeverityCritical,
 		Message:   verdict.Message,
 		Actor:     "ANOMALOUS_ACTOR",
+		OwnerID:   ownerID,
 	})
 }
 
 func (h *Handlers) HandleGetCorrelations(c *gin.Context) {
+	ownerID := h.getRequestOwnerID(c)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	search := strings.TrimSpace(c.Query("search"))
@@ -569,7 +768,7 @@ func (h *Handlers) HandleGetCorrelations(c *gin.Context) {
 	}
 	offset := (page - 1) * limit
 
-	list, total, err := h.repo.GetTelemetryCorrelationsWithFilter(limit, offset, search)
+	list, total, err := h.repo.GetTelemetryCorrelationsWithFilter(limit, offset, search, ownerID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -611,7 +810,8 @@ func (h *Handlers) HandleGetAssetLatestTelemetry(c *gin.Context) {
 }
 
 func (h *Handlers) HandleGetTopology(c *gin.Context) {
-	assets, _, _ := h.repo.GetAssets(false, 0, 0)
+	ownerID := h.getRequestOwnerID(c)
+	assets, _, _ := h.repo.GetAssets(false, 0, 0, ownerID)
 	var nodes []models.TopologyNode
 	var edges []models.TopologyEdge
 
@@ -620,6 +820,7 @@ func (h *Handlers) HandleGetTopology(c *gin.Context) {
 			ID:             a.ID,
 			Label:          a.Name,
 			Type:           a.Type,
+			Classification: a.Classification,
 			IntegrityState: a.IntegrityState,
 		})
 	}
@@ -629,6 +830,13 @@ func (h *Handlers) HandleGetTopology(c *gin.Context) {
 			Source: nodes[0].ID,
 			Target: nodes[i].ID,
 		})
+	}
+
+	if nodes == nil {
+		nodes = []models.TopologyNode{}
+	}
+	if edges == nil {
+		edges = []models.TopologyEdge{}
 	}
 
 	c.JSON(http.StatusOK, models.AssetTopology{
@@ -642,6 +850,7 @@ func (h *Handlers) HandleGetTopology(c *gin.Context) {
 // ----------------------------------------------------------------------------
 
 func (h *Handlers) HandleForensicInvestigate(c *gin.Context) {
+	ownerID := h.getRequestOwnerID(c)
 	assetID := c.Param("asset_id")
 	if assetID == "" {
 		assetID = c.Param("assetId")
@@ -653,11 +862,8 @@ func (h *Handlers) HandleForensicInvestigate(c *gin.Context) {
 		_ = c.ShouldBindJSON(&body)
 		assetID = body.AssetID
 	}
-	if assetID == "" {
-		assetID = "AST-RADIO-VHF"
-	}
 
-	assets, _, _ := h.repo.GetAssets(false, 0, 0)
+	assets, _, _ := h.repo.GetAssets(false, 0, 0, ownerID)
 	var target models.Asset
 	for _, a := range assets {
 		if a.ID == assetID {
@@ -665,13 +871,20 @@ func (h *Handlers) HandleForensicInvestigate(c *gin.Context) {
 			break
 		}
 	}
+	if target.ID == "" && len(assets) > 0 {
+		target = assets[0]
+	}
 	if target.ID == "" {
+		if assetID == "" {
+			assetID = fmt.Sprintf("AST-OT-%03d", rand.Intn(900)+100)
+		}
 		target = models.Asset{
 			ID:           assetID,
 			Name:         "Modul Pertahanan " + assetID,
 			Vendor:       "PT Len Industri / Thales Defence",
-			SerialNumber: "SN-TAC-9921",
-			FirmwareHash: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+			SerialNumber: fmt.Sprintf("SN-TAC-%04d", rand.Intn(9000)+1000),
+			FirmwareHash: fmt.Sprintf("%x", sha256.Sum256([]byte(assetID+ownerID))),
+			OwnerID:      ownerID,
 		}
 	}
 
@@ -728,12 +941,13 @@ func (h *Handlers) HandleForensicInvestigate(c *gin.Context) {
 	if off, exists := c.Get("officer_id"); exists {
 		actor = fmt.Sprintf("%v", off)
 	}
-	_, _ = h.repo.AppendLedger(actor, "RUN_FORENSIC_INVESTIGATION", target.ID, fmt.Sprintf("INV:%s:CONF:%.2f", invID, confidence))
+	_, _ = h.repo.AppendLedger(actor, "RUN_FORENSIC_INVESTIGATION", target.ID, fmt.Sprintf("INV:%s:CONF:%.2f", invID, confidence), ownerID)
 
 	c.JSON(http.StatusOK, report)
 }
 
 func (h *Handlers) HandleForensicIsolate(c *gin.Context) {
+	ownerID := h.getRequestOwnerID(c)
 	assetID := c.Param("asset_id")
 	if assetID == "" {
 		var body struct {
@@ -749,15 +963,19 @@ func (h *Handlers) HandleForensicIsolate(c *gin.Context) {
 	// 1. Update status in Supabase
 	_ = h.repo.UpdateAssetStatus(assetID, models.StateCompromised, "ISOLATED")
 
-	// 2. Queue Kill-Switch Command for IoT simulator
+	// 2. Queue Kill-Switch Command for IoT simulator & physical ESP32 dongle
 	actor := "COMMANDER_CONSOLE"
 	if off, exists := c.Get("officer_id"); exists {
 		actor = fmt.Sprintf("%v", off)
 	}
 	cmd := h.repo.QueueIoTCommand(assetID, "ISOLATE_NODE", actor)
+	if assetID != "AST-RADAR-01" {
+		// Also mirror to default hardware dongle ID so physical ESP32 triggers without reflashing ASSET_ID
+		_ = h.repo.QueueIoTCommand("AST-RADAR-01", "ISOLATE_NODE", actor)
+	}
 
 	// 3. Log into Audit Ledger
-	_, _ = h.repo.AppendLedger(actor, "KILL_SWITCH_NODE_ISOLATION", assetID, fmt.Sprintf("CMD:%s:RELAY_CUT", cmd.ID))
+	_, _ = h.repo.AppendLedger(actor, "KILL_SWITCH_NODE_ISOLATION", assetID, fmt.Sprintf("CMD:%s:RELAY_CUT", cmd.ID), ownerID)
 
 	// 4. Broadcast SSE
 	h.siem.BroadcastSSE("NODE_ISOLATED", gin.H{
@@ -776,6 +994,7 @@ func (h *Handlers) HandleForensicIsolate(c *gin.Context) {
 }
 
 func (h *Handlers) HandleExportForensicReport(c *gin.Context) {
+	ownerID := h.getRequestOwnerID(c)
 	assetID := c.Param("asset_id")
 	if assetID == "" {
 		assetID = c.Param("id")
@@ -784,7 +1003,7 @@ func (h *Handlers) HandleExportForensicReport(c *gin.Context) {
 		assetID = "AST-RADIO-VHF"
 	}
 
-	assets, _, _ := h.repo.GetAssets(false, 0, 0)
+	assets, _, _ := h.repo.GetAssets(false, 0, 0, ownerID)
 	var target models.Asset
 	for _, a := range assets {
 		if a.ID == assetID || a.SerialNumber == assetID {
@@ -846,10 +1065,11 @@ func (h *Handlers) HandleExportForensicReport(c *gin.Context) {
 // ----------------------------------------------------------------------------
 
 func (h *Handlers) HandleGetAssets(c *gin.Context) {
+	ownerID := h.getRequestOwnerID(c)
 	criticalOnly := c.Query("critical") == "true"
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "0"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
-	assets, _, err := h.repo.GetAssets(criticalOnly, limit, offset)
+	assets, _, err := h.repo.GetAssets(criticalOnly, limit, offset, ownerID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -858,9 +1078,10 @@ func (h *Handlers) HandleGetAssets(c *gin.Context) {
 }
 
 func (h *Handlers) HandleGetLedger(c *gin.Context) {
+	ownerID := h.getRequestOwnerID(c)
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "0"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
-	entries, _, err := h.repo.GetLedger(limit, offset)
+	entries, _, err := h.repo.GetLedger(limit, offset, ownerID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -869,7 +1090,8 @@ func (h *Handlers) HandleGetLedger(c *gin.Context) {
 }
 
 func (h *Handlers) HandleVerifyLedger(c *gin.Context) {
-	valid, total, tampered := h.repo.VerifyLedgerIntegrity()
+	ownerID := h.getRequestOwnerID(c)
+	valid, total, tampered := h.repo.VerifyLedgerIntegrity(ownerID)
 	status := "VERIFIED_INTEGRITY_OK"
 	if !valid {
 		status = "CHAIN_INTEGRITY_COMPROMISED"
@@ -885,6 +1107,7 @@ func (h *Handlers) HandleVerifyLedger(c *gin.Context) {
 }
 
 func (h *Handlers) HandleLogAuditAction(c *gin.Context) {
+	ownerID := h.getRequestOwnerID(c)
 	var body struct {
 		Actor   string `json:"actor"`
 		Action  string `json:"action"`
@@ -895,7 +1118,7 @@ func (h *Handlers) HandleLogAuditAction(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	entry, err := h.repo.AppendLedger(body.Actor, body.Action, body.AssetID, body.Payload)
+	entry, err := h.repo.AppendLedger(body.Actor, body.Action, body.AssetID, body.Payload, ownerID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -973,7 +1196,7 @@ func (h *Handlers) HandleRegisterOfficer(c *gin.Context) {
 		return
 	}
 
-	_, _ = h.repo.AppendLedger("OFFICER_ENROLLMENT", "OFFICER_REGISTERED", off.ID, fmt.Sprintf("ROLE:%s:NRP:%s", off.Role, off.NRP))
+	_, _ = h.repo.AppendLedger("OFFICER_ENROLLMENT", "OFFICER_REGISTERED", off.ID, fmt.Sprintf("ROLE:%s:NRP:%s", off.Role, off.NRP), off.Email)
 	c.JSON(http.StatusOK, gin.H{"success": true, "officer": off})
 }
 
@@ -998,8 +1221,23 @@ func (h *Handlers) HandleVerifyMemberNRP(c *gin.Context) {
 		return
 	}
 
+	now := time.Now()
 	token := h.hmacQR.Sign(fmt.Sprintf("%s:%s:%s", off.ID, off.Email, off.Role))
-	_, _ = h.repo.AppendLedger(off.Name, "OFFICER_LOGIN_VERIFIED", off.ID, fmt.Sprintf("NRP:%s:ROLE:%s", body.NRP, off.Role))
+	if h.mw != nil {
+		if jwtToken, err := h.mw.GenerateMilitaryToken(middleware.MilitaryTokenClaims{
+			Sub:       off.ID,
+			Name:      off.Name,
+			Email:     off.Email,
+			Role:      off.Role,
+			NRP:       off.NRP,
+			Issuer:    "OZIK-SENTINEL-PUSSIBERAD",
+			IssuedAt:  now.Unix(),
+			ExpiresAt: now.Add(24 * time.Hour).Unix(),
+		}); err == nil {
+			token = jwtToken
+		}
+	}
+	_, _ = h.repo.AppendLedger(off.Name, "OFFICER_LOGIN_VERIFIED", off.ID, fmt.Sprintf("NRP:%s:ROLE:%s", body.NRP, off.Role), off.Email)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -1013,6 +1251,10 @@ func (h *Handlers) HandleSimulateRole(c *gin.Context) {
 		TargetRole    string `json:"target_role"`
 		TargetRoleAlt string `json:"targetRole"`
 		Role          string `json:"role"`
+		ID            string `json:"id"`
+		Name          string `json:"name"`
+		Email         string `json:"email"`
+		NRP           string `json:"nrp"`
 	}
 	rawBytes, _ := io.ReadAll(c.Request.Body)
 	_ = json.Unmarshal(rawBytes, &body)
@@ -1051,10 +1293,10 @@ func (h *Handlers) HandleSimulateRole(c *gin.Context) {
 		return
 	}
 
-	sub := "officer-evaluator"
+	sub := fmt.Sprintf("off-session-%d", time.Now().Unix()%100000)
 	name := "Perwira Evaluator Siber (TNI-AD)"
-	email := "evaluator.pussiberad@tni-ad.mil.id"
-	nrp := "11050182740981"
+	email := fmt.Sprintf("officer.%d@pussiberad.mil.id", time.Now().Unix()%100000)
+	nrp := fmt.Sprintf("11260%05d", rand.Intn(90000)+10000)
 
 	authHeader := c.GetHeader("Authorization")
 	officerToken := c.GetHeader("X-Officer-Token")
@@ -1082,6 +1324,26 @@ func (h *Handlers) HandleSimulateRole(c *gin.Context) {
 		}
 	}
 
+	// Override with explicit request/header officer identity so each user keeps their isolated workspace
+	if hID := strings.TrimSpace(c.GetHeader("X-Officer-ID")); hID != "" {
+		sub = hID
+	}
+	if hEmail := strings.TrimSpace(c.GetHeader("X-Officer-Email")); hEmail != "" {
+		email = strings.ToLower(hEmail)
+	}
+	if strings.TrimSpace(body.ID) != "" {
+		sub = strings.TrimSpace(body.ID)
+	}
+	if strings.TrimSpace(body.Name) != "" {
+		name = strings.TrimSpace(body.Name)
+	}
+	if strings.TrimSpace(body.Email) != "" {
+		email = strings.ToLower(strings.TrimSpace(body.Email))
+	}
+	if strings.TrimSpace(body.NRP) != "" {
+		nrp = strings.TrimSpace(body.NRP)
+	}
+
 	now := time.Now()
 	claims := middleware.MilitaryTokenClaims{
 		Sub:       sub,
@@ -1100,8 +1362,8 @@ func (h *Handlers) HandleSimulateRole(c *gin.Context) {
 		return
 	}
 
-	// Append real audit entry to Supabase audit_ledger
-	_, _ = h.repo.AppendLedger(name, "TACTICAL_ROLE_SWITCH", "COMMAND_STATION", fmt.Sprintf("SWITCHED_TO_ROLE:%s", targetRole))
+	// Append real audit entry to Supabase audit_ledger scoped to this user
+	_, _ = h.repo.AppendLedger(name, "TACTICAL_ROLE_SWITCH", "COMMAND_STATION", fmt.Sprintf("SWITCHED_TO_ROLE:%s", targetRole), email)
 
 	// Set cookie for browser session persistence
 	c.SetCookie("ozik_token", newToken, 86400, "/", "", false, false)
@@ -1211,70 +1473,93 @@ func (h *Handlers) HandleUpdateEngineConfig(c *gin.Context) {
 // ----------------------------------------------------------------------------
 
 func (h *Handlers) HandleSeedDemoDataset(c *gin.Context) {
+	ownerID := h.getRequestOwnerID(c)
+	suffix := fmt.Sprintf("%03d", rand.Intn(900)+100)
 	score98 := 98
 	score92 := 92
 	score45 := 45
 	score99 := 99
 
+	lat1, lng1, loc1 := resolveTacticalCoordinates("RADAR" + ownerID + suffix)
+	lat2, lng2, loc2 := resolveTacticalCoordinates("SRV" + ownerID + suffix)
+	lat3, lng3, loc3 := resolveTacticalCoordinates("RADIO" + ownerID + suffix)
+	lat4, lng4, loc4 := resolveTacticalCoordinates("ARMORY" + ownerID + suffix)
+
 	sampleAssets := []models.Asset{
 		{
-			ID:             "AST-RADAR-01",
-			Name:           "Radar Avionik Paskhas Unit-A (OT Alutsista)",
-			SerialNumber:   "SN-RDR-2026-X9",
+			ID:             "AST-RADAR-" + suffix,
+			Name:           "Radar Avionik Paskhas Unit-" + suffix + " (OT Alutsista)",
+			SerialNumber:   "SN-RDR-2026-" + suffix,
 			Vendor:         "PT Len Industri / Thales",
 			Type:           models.TypeOTRadar,
 			Classification: models.ClassificationOT,
 			TrustScore:     &score98,
 			IntegrityState: models.StateSecure,
 			QRWindowStatus: models.WindowClosed,
-			QRHash:         "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-			FirmwareHash:   "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+			QRHash:         fmt.Sprintf("%x", sha256.Sum256([]byte("AST-RADAR-"+suffix+ownerID))),
+			FirmwareHash:   fmt.Sprintf("%x", sha256.Sum256([]byte("FW-RADAR-"+suffix))),
 			CVECount:       0,
+			Latitude:       &lat1,
+			Longitude:      &lng1,
+			LocationName:   loc1,
+			OwnerID:        ownerID,
 			RegisteredAt:   time.Now().Add(-24 * time.Hour).Format(time.RFC3339),
 		},
 		{
-			ID:             "AST-SRV-TACTICAL",
-			Name:           "Server Komando Taktis Mobile (IT Rugged Node)",
-			SerialNumber:   "SN-SRV-MIL-8841",
+			ID:             "AST-SRV-" + suffix,
+			Name:           "Server Komando Taktis Mobile-" + suffix + " (IT Rugged Node)",
+			SerialNumber:   "SN-SRV-MIL-" + suffix,
 			Vendor:         "Crystal Group Taktis",
 			Type:           models.TypeITServer,
 			Classification: models.ClassificationIT,
 			TrustScore:     &score92,
 			IntegrityState: models.StateMaintenance,
 			QRWindowStatus: models.WindowOpen,
-			QRHash:         "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
-			FirmwareHash:   "4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a",
+			QRHash:         fmt.Sprintf("%x", sha256.Sum256([]byte("AST-SRV-"+suffix+ownerID))),
+			FirmwareHash:   fmt.Sprintf("%x", sha256.Sum256([]byte("FW-SRV-"+suffix))),
 			CVECount:       1,
+			Latitude:       &lat2,
+			Longitude:      &lng2,
+			LocationName:   loc2,
+			OwnerID:        ownerID,
 			RegisteredAt:   time.Now().Add(-18 * time.Hour).Format(time.RFC3339),
 		},
 		{
-			ID:             "AST-RADIO-VHF",
-			Name:           "Radio Taktis VHF Harris Falcon (OT Manpack)",
-			SerialNumber:   "SN-RF-5800H-901",
+			ID:             "AST-RADIO-" + suffix,
+			Name:           "Radio Taktis VHF Harris Falcon-" + suffix + " (OT Manpack)",
+			SerialNumber:   "SN-RF-5800H-" + suffix,
 			Vendor:         "L3Harris Communications",
 			Type:           models.TypeTacticalRadio,
 			Classification: models.ClassificationOT,
 			TrustScore:     &score45,
 			IntegrityState: models.StateCompromised,
 			QRWindowStatus: models.WindowClosed,
-			QRHash:         "ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d",
-			FirmwareHash:   "ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d",
+			QRHash:         fmt.Sprintf("%x", sha256.Sum256([]byte("AST-RADIO-"+suffix+ownerID))),
+			FirmwareHash:   fmt.Sprintf("%x", sha256.Sum256([]byte("FW-RADIO-"+suffix))),
 			CVECount:       2,
+			Latitude:       &lat3,
+			Longitude:      &lng3,
+			LocationName:   loc3,
+			OwnerID:        ownerID,
 			RegisteredAt:   time.Now().Add(-12 * time.Hour).Format(time.RFC3339),
 		},
 		{
-			ID:             "ARMORY-ENV-02",
-			Name:           "Sensor Suhu & Kelembaban Gudang Amunisi (OT Safety)",
-			SerialNumber:   "SN-ARMORY-ENV-902",
+			ID:             "ARMORY-ENV-" + suffix,
+			Name:           "Sensor Suhu & Kelembaban Gudang Amunisi-" + suffix + " (OT Safety)",
+			SerialNumber:   "SN-ARMORY-ENV-" + suffix,
 			Vendor:         "Schneider Electric Mil-Spec",
 			Type:           models.TypeOTRadar,
 			Classification: models.ClassificationOT,
 			TrustScore:     &score99,
 			IntegrityState: models.StateSecure,
 			QRWindowStatus: models.WindowClosed,
-			QRHash:         "3c9909afec25354d551dae21590bb26e38d53f2173b8d3dc3eee4c047e7ab1c1",
-			FirmwareHash:   "a2c4e688b1357900dfba5832a5678b87452d3a985e5f3c1b0923485761019283",
+			QRHash:         fmt.Sprintf("%x", sha256.Sum256([]byte("ARMORY-ENV-"+suffix+ownerID))),
+			FirmwareHash:   fmt.Sprintf("%x", sha256.Sum256([]byte("FW-ARMORY-"+suffix))),
 			CVECount:       0,
+			Latitude:       &lat4,
+			Longitude:      &lng4,
+			LocationName:   loc4,
+			OwnerID:        ownerID,
 			RegisteredAt:   time.Now().Add(-6 * time.Hour).Format(time.RFC3339),
 		},
 	}
@@ -1283,12 +1568,12 @@ func (h *Handlers) HandleSeedDemoDataset(c *gin.Context) {
 		_ = h.repo.UpsertAsset(a)
 	}
 
-	// Genesis Block
-	_, _ = h.repo.AppendLedger("SYSTEM_GENESIS", "IMMUTABLE_ROOT_INIT", "", "GENESIS_SYS_BOOT:OZIK_TACTICAL_2026")
-	_, _ = h.repo.AppendLedger("Lt. Col. Ozikra", "GATEKEEPER_SEAL_ISSUED", "AST-RADAR-01", "AST-RADAR-01:SEAL:APPROVED")
+	// Genesis Block scoped to user
+	_, _ = h.repo.AppendLedger("SYSTEM_GENESIS", "IMMUTABLE_ROOT_INIT", "", "GENESIS_SYS_BOOT:OZIK_TACTICAL_2026", ownerID)
+	_, _ = h.repo.AppendLedger(ownerID, "GATEKEEPER_SEAL_ISSUED", sampleAssets[0].ID, sampleAssets[0].ID+":SEAL:APPROVED", ownerID)
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":      "Real demo dataset seeded successfully into Supabase Postgres database.",
+		"message":      "Isolated tactical dataset seeded successfully for user session.",
 		"assets_count": len(sampleAssets),
 	})
 }

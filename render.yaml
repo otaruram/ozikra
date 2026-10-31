@@ -21,7 +21,7 @@ services:
       - key: SERVER_HMAC_SECRET
         generateValue: true
       - key: CORS_ALLOWED_ORIGINS
-        value: "https://*.vercel.app,http://localhost:3000,http://localhost:5000"
+        value: "https://oziksentinel.biz.id,https://www.oziksentinel.biz.id,https://*.vercel.app,http://localhost:3000,http://localhost:5000"
       - key: AUTH_MODE
         value: "GOOGLE_SANDBOX"
       - key: AI_MODE

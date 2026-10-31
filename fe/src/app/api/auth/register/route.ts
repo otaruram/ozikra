@@ -10,13 +10,12 @@ const BACKEND_URL =
     ? rawBackend
     : "https://ozik-sentinel.onrender.com";
 
-const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://teeqoxykamaesdmvlfnp.supabase.co";
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const SUPABASE_KEY =
   process.env.SUPABASE_SECRET_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-  "sb_publishable_8uQdT6wC-9dWckd5v-QWcA_ArkAqYKA";
+  "";
 
 export async function POST(request: Request) {
   let body: any = {};
@@ -46,47 +45,49 @@ export async function POST(request: Request) {
     console.warn("[AUTH-REGISTER] Go backend unreachable, falling back to direct Supabase Cloud persistence:", backendErr);
   }
 
-  // 2. Direct Supabase Cloud Fallback Persistence
-  try {
-    const id = `usr-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
-    const officer = {
-      id,
-      name: body.name || "Perwira Siber",
-      email: (body.email || "").toLowerCase().trim(),
-      role: body.role || "COMMANDER",
-      nrp: body.nrp || "11050182740981",
-      unit: body.unit || "Pusat Sandi & Siber TNI-AD (PUSSANSERAD)",
-      rank: body.rank || "Perwira",
-      status: "APPROVED",
-      public_key: `ED25519-MIL-CERT-${(body.email || "OFFICER").split("@")[0].toUpperCase()}-2026`,
-    };
+  // 2. Direct Supabase Cloud Fallback Persistence (only if env vars configured)
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    try {
+      const id = `usr-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
+      const officer = {
+        id,
+        name: body.name || "Perwira Siber",
+        email: (body.email || "").toLowerCase().trim(),
+        role: body.role || "COMMANDER",
+        nrp: body.nrp || "11050182740981",
+        unit: body.unit || "Pusat Sandi & Siber TNI-AD (PUSSANSERAD)",
+        rank: body.rank || "Perwira",
+        status: "APPROVED",
+        public_key: `ED25519-MIL-CERT-${(body.email || "OFFICER").split("@")[0].toUpperCase()}-2026`,
+      };
 
-    const supaRes = await fetch(`${SUPABASE_URL}/rest/v1/officer_profiles`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-        Prefer: "resolution=merge-duplicates,return=representation",
-      },
-      body: JSON.stringify(officer),
-    });
-
-    if (supaRes.ok) {
-      const created = await supaRes.json();
-      const confirmedOfficer = Array.isArray(created) && created[0] ? created[0] : officer;
-      return NextResponse.json({
-        success: true,
-        officer: confirmedOfficer,
-        token: `mil-jwt-${confirmedOfficer.id}-${Date.now()}`,
-        message: "Personel berhasil terdaftar dan diautentikasi.",
+      const supaRes = await fetch(`${SUPABASE_URL}/rest/v1/officer_profiles`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+          Prefer: "resolution=merge-duplicates,return=representation",
+        },
+        body: JSON.stringify(officer),
       });
-    }
 
-    const errText = await supaRes.text();
-    console.error("[SUPABASE-FALLBACK-ERR]", errText);
-  } catch (supaErr: any) {
-    console.error("[SUPABASE-FETCH-ERR]", supaErr);
+      if (supaRes.ok) {
+        const created = await supaRes.json();
+        const confirmedOfficer = Array.isArray(created) && created[0] ? created[0] : officer;
+        return NextResponse.json({
+          success: true,
+          officer: confirmedOfficer,
+          token: `mil-jwt-${confirmedOfficer.id}-${Date.now()}`,
+          message: "Personel berhasil terdaftar dan diautentikasi.",
+        });
+      }
+
+      const errText = await supaRes.text();
+      console.error("[SUPABASE-FALLBACK-ERR]", errText);
+    } catch (supaErr: any) {
+      console.error("[SUPABASE-FETCH-ERR]", supaErr);
+    }
   }
 
   // 3. Resilient Military Session Fallback (Zero Blocking)

@@ -30,6 +30,7 @@ import {
   onTriggerQRCheckIn,
 } from "@/lib/api";
 import { canTriggerMaintenanceWindow } from "@/lib/rbac";
+import { generateSiemAutoFill } from "@/lib/autofill-generator";
 import { useSession } from "@/lib/session-context";
 import dynamic from "next/dynamic";
 import type { AssetTopology, TelemetryCorrelation } from "@/types/sentinel";
@@ -86,10 +87,11 @@ function useCountdown(expiresAt: string | null | undefined) {
 
 function TopologyView({ topology }: { topology: AssetTopology }) {
   const size = 320;
-  const r = 120;
+  const r = 115;
+  const nodeMap = new Map(topology.nodes.map((n) => [n.id, n]));
   const pos = new Map(
     topology.nodes.map((n, i) => {
-      const a = (i / topology.nodes.length) * Math.PI * 2 - Math.PI / 2;
+      const a = (i / Math.max(1, topology.nodes.length)) * Math.PI * 2 - Math.PI / 2;
       return [n.id, { x: size / 2 + r * Math.cos(a), y: size / 2 + r * Math.sin(a) }];
     }),
   );
@@ -99,11 +101,29 @@ function TopologyView({ topology }: { topology: AssetTopology }) {
         const s = pos.get(e.source);
         const t = pos.get(e.target);
         if (!s || !t) return null;
-        return <line key={`${e.source}-${e.target}-${idx}`} x1={s.x} y1={s.y} x2={t.x} y2={t.y} stroke="#2e2e2e" strokeWidth={1} />;
+        const sNode = nodeMap.get(e.source);
+        const tNode = nodeMap.get(e.target);
+        const isBlastRadius =
+          sNode?.integrityState === "COMPROMISED" ||
+          tNode?.integrityState === "COMPROMISED" ||
+          sNode?.integrityState === "QUARANTINED" ||
+          tNode?.integrityState === "QUARANTINED";
+        return (
+          <line
+            key={`${e.source}-${e.target}-${idx}`}
+            x1={s.x}
+            y1={s.y}
+            x2={t.x}
+            y2={t.y}
+            stroke={isBlastRadius ? "#ef4444" : "#2e2e2e"}
+            strokeWidth={isBlastRadius ? 1.8 : 1}
+            strokeDasharray={isBlastRadius ? "4 2" : undefined}
+          />
+        );
       })}
       {topology.nodes.map((n) => {
         const p = pos.get(n.id)!;
-        const bad = n.integrityState === "COMPROMISED";
+        const bad = n.integrityState === "COMPROMISED" || n.integrityState === "QUARANTINED";
         return (
           <g key={n.id}>
             <rect
@@ -111,12 +131,12 @@ function TopologyView({ topology }: { topology: AssetTopology }) {
               y={p.y - 6}
               width={12}
               height={12}
-              fill={bad || n.integrityState === "SECURE" ? "#fff" : "#000"}
+              fill={bad ? "#ef4444" : n.integrityState === "SECURE" ? "#10b981" : "#f59e0b"}
               stroke="#fff"
               className={bad ? "animate-pulse" : undefined}
             />
-            <text x={p.x} y={p.y + 22} textAnchor="middle" className="fill-[#888] font-mono text-[9px]">
-              {n.label}
+            <text x={p.x} y={p.y + 20} textAnchor="middle" className="fill-[#bbb] font-mono text-[8.5px]">
+              {n.id}
             </text>
           </g>
         );
@@ -126,7 +146,7 @@ function TopologyView({ topology }: { topology: AssetTopology }) {
 }
 
 export default function SiemPage() {
-  const { role } = useSession();
+  const { role, session } = useSession();
   const [qrHash, setQrHash] = useState("");
   const [techId, setTechId] = useState("");
   const [viewMode, setViewMode] = useState<"MAP" | "GRAPH">("MAP");
@@ -236,32 +256,23 @@ export default function SiemPage() {
     }
   };
 
-  // Tactical Simulation Seeder: Open maintenance window and send nominal IoT telemetry packet
+  // Tactical Simulation Seeder: Per-user dynamic QR Check-In & Telemetry Generator
   const handleAutoFillSiem = async () => {
-    const targetAsset = assets.data?.find((a) => a.id === "AST-RADAR-01") || assets.data?.find((a) => a.qrHash) || assets.data?.[0];
-    const targetId = targetAsset?.id || "AST-RADAR-01";
-    const targetHash = targetAsset?.qrHash || "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-    const targetFw = targetAsset?.firmwareHash || "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
-    const technician = "Sgt. Pratama (NRP 310892 - PUSSIBERAD)";
-    setQrHash(targetHash);
-    setTechId(technician);
+    const bundle = generateSiemAutoFill(assets.data || [], session?.user?.email);
+    setQrHash(bundle.qrHash);
+    setTechId(bundle.technicianId);
 
-    // 1. Execute backend QR check-in & open HMAC window in Supabase Postgres
-    await checkIn.run({ assetQrHash: targetHash, technicianId: technician });
+    // 1. If authorized maintenance scenario (or user has no assets yet), open HMAC window in Supabase Postgres
+    if (!bundle.isAnomalyScenario || (assets.data || []).length === 0) {
+      await checkIn.run({ assetQrHash: bundle.qrHash, technicianId: bundle.technicianId });
+    }
 
-    // 2. Transmit nominal IoT Edge telemetry log within the opened window
+    // 2. Transmit IoT Edge telemetry log (either nominal within window or Zero-Trust anomaly)
     try {
-      await onSendIoTTelemetry({
-        asset_id: targetId,
-        temperature_c: 38.6,
-        voltage_v: 24.1,
-        firmware_hash: targetFw,
-        network_tx_kbps: 340.0,
-        qr_hash: targetHash,
-      });
+      await onSendIoTTelemetry(bundle.telemetryPayload);
     } catch (e) {}
 
-    // 3. Immediately refresh correlations and asset registry so user observes green status change
+    // 3. Immediately refresh correlations, topology, and asset registry
     await Promise.all([loadTelemetry(), assets.refetch(), topology.refetch()]);
   };
 

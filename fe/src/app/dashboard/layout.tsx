@@ -34,16 +34,16 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-ink">
+    <div className="flex min-h-screen max-w-[100vw] overflow-x-hidden bg-ink">
       <Sidebar open={sidebarOpen} onNavigate={() => setSidebarOpen(false)} />
       {sidebarOpen && (
         <div className="fixed inset-0 z-30 bg-ink/70 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
         <Header onToggleSidebar={() => setSidebarOpen((v) => !v)} />
-        <main className="relative flex-1">
+        <main className="relative flex-1 overflow-x-hidden">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-dots mask-fade-b opacity-60" />
-          <div className="relative mx-auto flex w-full max-w-[1400px] flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
+          <div className="relative mx-auto flex w-full max-w-[1400px] min-w-0 flex-col gap-5 px-3.5 py-5 sm:px-5 md:gap-6 md:px-8 md:py-8">
             {children}
           </div>
         </main>

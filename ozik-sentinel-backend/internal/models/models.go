@@ -104,6 +104,7 @@ type Asset struct {
 	Latitude       *float64            `json:"latitude,omitempty"`
 	Longitude      *float64            `json:"longitude,omitempty"`
 	LocationName   string              `json:"locationName,omitempty"`
+	OwnerID        string              `json:"ownerId,omitempty"`
 	RegisteredAt   string              `json:"registeredAt"`
 	UpdatedAt      string              `json:"updatedAt,omitempty"`
 }
@@ -189,6 +190,7 @@ type TelemetryEvent struct {
 	Severity  TelemetrySeverity `json:"severity"`
 	Message   string            `json:"message"`
 	Actor     string            `json:"actor,omitempty"`
+	OwnerID   string            `json:"ownerId,omitempty"`
 }
 
 type PhysicalAuthorization string
@@ -207,13 +209,15 @@ type TelemetryCorrelation struct {
 	PhysicalAuthorization PhysicalAuthorization `json:"physicalAuthorization"`
 	MaintenanceWindowID   string                `json:"maintenanceWindowId,omitempty"`
 	Verdict               string                `json:"verdict"` // NOMINAL, ANOMALY
+	OwnerID               string                `json:"ownerId,omitempty"`
 }
 
 type TopologyNode struct {
-	ID             string         `json:"id"`
-	Label          string         `json:"label"`
-	Type           AssetType      `json:"type"`
-	IntegrityState IntegrityState `json:"integrityState"`
+	ID             string              `json:"id"`
+	Label          string              `json:"label"`
+	Type           AssetType           `json:"type"`
+	Classification AssetClassification `json:"classification,omitempty"`
+	IntegrityState IntegrityState      `json:"integrityState"`
 }
 
 type TopologyEdge struct {
@@ -265,6 +269,7 @@ type LedgerEntry struct {
 	PayloadHash  string `json:"payloadHash"`
 	PreviousHash string `json:"previousHash"`
 	Hash         string `json:"hash"`
+	OwnerID      string `json:"ownerId,omitempty"`
 }
 
 type IoTCommand struct {

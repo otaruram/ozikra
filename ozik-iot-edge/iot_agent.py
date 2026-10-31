@@ -81,6 +81,7 @@ DEVICE_PROFILES = {
 
 # State lokal perangkat
 is_device_isolated = False
+active_officer_email = os.getenv("OFFICER_EMAIL", "")
 
 def calculate_hmac(payload: str) -> str:
     """Buat tanda tangan kriptografi HMAC-SHA256 militer."""
@@ -92,8 +93,11 @@ def send_http_request(url: str, data: dict = None, method: str = "POST") -> dict
     headers = {
         "Content-Type": "application/json",
         "User-Agent": "Ozik-Tactical-IoT-Agent/2.5.0-MIL",
-        "Accept": "application/json"
+        "Accept": "application/json",
+        "X-Simulated-Role": "OT_TECHNICIAN",
     }
+    if active_officer_email:
+        headers["X-Officer-Email"] = active_officer_email
     
     payload_bytes = json.dumps(data).encode("utf-8") if data is not None else None
     req = urllib.request.Request(url, data=payload_bytes, headers=headers, method=method)
@@ -218,7 +222,7 @@ def poll_remote_commands(profile: dict):
     if cmds:
         for cmd in cmds:
             action = cmd.get("action", "").upper()
-            if action in ["ISOLATE", "KILL", "LOCKDOWN"]:
+            if action in ["ISOLATE", "ISOLATE_NODE", "KILL", "LOCKDOWN"]:
                 is_device_isolated = True
                 print("\n" + "="*70)
                 print("\033[91m[PERINGATAN TINGGI // EMERGENCY COMMAND RECEIVED]\033[0m")
@@ -249,18 +253,37 @@ def run_auto_daemon(profile: dict, interval: int = 4):
         print("\n[DAEMON STOPPED] Kembali ke menu utama.")
 
 def main():
-    global is_device_isolated
+    global is_device_isolated, active_officer_email
     banner()
 
     # Pilih profil aset alutsista
     print("PILIH ALUTSISTA / ASET LAPANGAN:")
     for k, v in DEVICE_PROFILES.items():
         print(f"  [{k}] {v['name']} ({v['device_id']})")
+    print("  [4] Masukkan Custom Asset ID (Sesuai ID Aset di Web Anda)")
 
-    choice = input("\nMasukkan pilihan (1/2/3, default: 1): ").strip()
-    if choice not in DEVICE_PROFILES:
-        choice = "1"
-    profile = DEVICE_PROFILES[choice]
+    choice = input("\nMasukkan pilihan (1/2/3/4, default: 1): ").strip()
+    if choice == "4":
+        custom_id = input("Masukkan Asset ID dari Web (contoh: AST-OT-412): ").strip().upper() or "AST-OT-412"
+        profile = {
+            "device_id": custom_id,
+            "name": f"Unit Alutsista Taktis ({custom_id})",
+            "qr_hash": hashlib.sha256(custom_id.encode("utf-8")).hexdigest(),
+            "firmware_hash": hashlib.sha256((custom_id + "-FW").encode("utf-8")).hexdigest(),
+            "normal_temp": 46.5,
+            "normal_volt": 24.0,
+            "normal_tx": 640.0,
+            "protocol": "MIL-STD-1553 / Tactical Bus",
+            "location": "Sektor Operasi Siber TNI AD",
+        }
+    else:
+        if choice not in DEVICE_PROFILES:
+            choice = "1"
+        profile = DEVICE_PROFILES[choice]
+
+    email_in = input("Masukkan Email Sesi Web Anda agar terhubung ke akun Anda (opsional, tekan Enter jika lewat Asset ID): ").strip()
+    if email_in:
+        active_officer_email = email_in.lower()
 
     technician_id = input("Masukkan NRP / ID Teknisi Lapangan (default: SGT-PRATAMA-3108): ").strip()
     if not technician_id:

@@ -10,13 +10,12 @@ const BACKEND_URL =
     ? rawBackend
     : "https://ozik-sentinel.onrender.com";
 
-const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://teeqoxykamaesdmvlfnp.supabase.co";
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const SUPABASE_KEY =
   process.env.SUPABASE_SECRET_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-  "sb_publishable_8uQdT6wC-9dWckd5v-QWcA_ArkAqYKA";
+  "";
 
 export async function POST(request: Request) {
   let body: any = {};
@@ -48,7 +47,7 @@ export async function POST(request: Request) {
 
   // 2. Direct Supabase Cloud Fallback Update
   try {
-    if (body.officer_id) {
+    if (body.officer_id && SUPABASE_URL && SUPABASE_KEY) {
       await fetch(
         `${SUPABASE_URL}/rest/v1/officer_profiles?id=eq.${encodeURIComponent(body.officer_id)}`,
         {

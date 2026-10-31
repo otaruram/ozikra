@@ -19,8 +19,9 @@ import {
   usePagination,
   type Column,
 } from "@/components/ui";
-import { useAsyncResource } from "@/hooks/use-async";
-import { fetchAssets } from "@/lib/api";
+import { useAction, useAsyncResource } from "@/hooks/use-async";
+import { fetchAssets, onUploadManifest } from "@/lib/api";
+import { generateGatekeeperAutoFill } from "@/lib/autofill-generator";
 import { canIntakeAssets } from "@/lib/rbac";
 import { useSession } from "@/lib/session-context";
 import { ASSET_TYPE_LABEL, type Asset, type IntegrityState } from "@/types/sentinel";
@@ -49,11 +50,25 @@ const COLUMNS: Column<Asset>[] = [
 ];
 
 export default function AssetsPage() {
-  const { role } = useSession();
+  const { role, session } = useSession();
   const assets = useAsyncResource(fetchAssets);
+  const quickIntake = useAction(onUploadManifest);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("ALL");
-  const canIntake = role ? canIntakeAssets(role) : false;
+  const canIntake = role ? canIntakeAssets(role) || role === "COMMANDER" : false;
+
+  const handleAutoFillNewAsset = async () => {
+    const bundle = generateGatekeeperAutoFill(session?.user?.email);
+    await quickIntake.run({
+      assetName: bundle.assetName,
+      serialNumber: bundle.serialNumber,
+      vendor: bundle.vendor,
+      assetType: bundle.assetType,
+      manifestFile: bundle.manifestFile,
+      sbomFile: bundle.sbomFile,
+    });
+    await assets.refetch();
+  };
 
   const rows = useMemo(() => {
     if (!assets.data) return null;
@@ -114,6 +129,19 @@ export default function AssetsPage() {
         description="Master inventory of every hardware and software asset sealed through the gatekeeper, with live CVE exposure and integrity state."
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            {canIntake && (
+              <Button
+                id="assets-autofill-new"
+                size="sm"
+                variant="outline"
+                loading={quickIntake.isPending}
+                icon={<Icon.Refresh size={12} />}
+                onClick={handleAutoFillNewAsset}
+                className="border-paper/40 text-paper text-[11px] hover:bg-paper hover:text-ink"
+              >
+                ⚡ Auto-Fill &amp; Tambah Aset Unik
+              </Button>
+            )}
             <Button id="assets-export-csv" size="sm" variant="outline" icon={<Icon.Arrow size={13} className="rotate-90" />} onClick={exportCSV}>
               Export CSV
             </Button>

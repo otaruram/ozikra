@@ -10,13 +10,12 @@ const BACKEND_URL =
     ? rawBackend
     : "https://ozik-sentinel.onrender.com";
 
-const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://teeqoxykamaesdmvlfnp.supabase.co";
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const SUPABASE_KEY =
   process.env.SUPABASE_SECRET_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-  "sb_publishable_8uQdT6wC-9dWckd5v-QWcA_ArkAqYKA";
+  "";
 
 export async function GET(request: Request) {
   try {
@@ -51,34 +50,36 @@ export async function GET(request: Request) {
     }
 
     // 2. Direct Supabase Cloud Query Fallback
-    try {
-      const supaRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/officer_profiles?email=eq.${encodeURIComponent(cleanEmail)}&select=*`,
-        {
-          headers: {
-            apikey: SUPABASE_KEY,
-            Authorization: `Bearer ${SUPABASE_KEY}`,
-          },
-          cache: "no-store",
-        }
-      );
+    if (SUPABASE_URL && SUPABASE_KEY) {
+      try {
+        const supaRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/officer_profiles?email=eq.${encodeURIComponent(cleanEmail)}&select=*`,
+          {
+            headers: {
+              apikey: SUPABASE_KEY,
+              Authorization: `Bearer ${SUPABASE_KEY}`,
+            },
+            cache: "no-store",
+          }
+        );
 
-      if (supaRes.ok) {
-        const rows = await supaRes.json();
-        if (Array.isArray(rows) && rows.length > 0) {
+        if (supaRes.ok) {
+          const rows = await supaRes.json();
+          if (Array.isArray(rows) && rows.length > 0) {
+            return NextResponse.json({
+              exists: true,
+              officer: rows[0],
+              source: "supabase_direct",
+            });
+          }
           return NextResponse.json({
-            exists: true,
-            officer: rows[0],
+            exists: false,
             source: "supabase_direct",
           });
         }
-        return NextResponse.json({
-          exists: false,
-          source: "supabase_direct",
-        });
+      } catch (supaErr) {
+        console.error("[SUPABASE-OFFICER-LOOKUP-ERR]", supaErr);
       }
-    } catch (supaErr) {
-      console.error("[SUPABASE-OFFICER-LOOKUP-ERR]", supaErr);
     }
 
     // 3. Fallback: Check if super admin email

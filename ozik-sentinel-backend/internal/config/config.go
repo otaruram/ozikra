@@ -51,7 +51,18 @@ func Load() *Config {
 		}
 	}
 	if len(origins) == 0 {
-		origins = []string{"http://localhost:3000", "http://localhost:5000", "https://*.vercel.app"}
+		origins = []string{"https://oziksentinel.biz.id", "https://www.oziksentinel.biz.id", "http://localhost:3000", "http://localhost:5000", "https://*.vercel.app"}
+	} else {
+		hasCustomDomain := false
+		for _, o := range origins {
+			if strings.Contains(o, "oziksentinel.biz.id") {
+				hasCustomDomain = true
+				break
+			}
+		}
+		if !hasCustomDomain {
+			origins = append(origins, "https://oziksentinel.biz.id", "https://www.oziksentinel.biz.id")
+		}
 	}
 
 	authMode := os.Getenv("AUTH_MODE")

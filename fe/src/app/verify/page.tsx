@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { generateVerifySealAutoFill } from "@/lib/autofill-generator";
 
 export default function VerifyPassportPage() {
   return (
@@ -20,11 +21,10 @@ export default function VerifyPassportPage() {
 
 function VerifyPassportContent() {
   const searchParams = useSearchParams();
-  const [assetId, setAssetId] = useState("AST-OT-728");
-  const [signature, setSignature] = useState(
-    "9646c4da85f251f977376861511b8cf99bcbb5e5589420b07ec874ac2f53b88"
-  );
-  const [timestamp, setTimestamp] = useState("2026-10-25 08:31:30");
+  const [assetId, setAssetId] = useState("");
+  const [signature, setSignature] = useState("");
+  const [timestamp, setTimestamp] = useState("");
+  const [vendor, setVendor] = useState("");
   const [securityLevel, setSecurityLevel] = useState("Zero-Trust Encrypted");
   const [isValid, setIsValid] = useState(true);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -34,16 +34,32 @@ function VerifyPassportContent() {
     const id = searchParams.get("id");
     const sig = searchParams.get("sig");
     const ts = searchParams.get("ts");
+    const vnd = searchParams.get("vendor");
     const status = searchParams.get("status");
 
     if (id) setAssetId(id);
     if (sig) setSignature(sig);
     if (ts) setTimestamp(ts);
-    if (status === "tampered" || status === "invalid") {
+    if (vnd) setVendor(vnd);
+    if (status === "tampered" || status === "invalid" || status === "quarantined") {
       setIsValid(false);
-      setSecurityLevel("SECURITY BREACH DETECTED");
+      setSecurityLevel("SECURITY BREACH / QUARANTINED");
+    } else if (status === "approved") {
+      setIsValid(true);
+      setSecurityLevel("Zero-Trust Encrypted");
     }
   }, [searchParams]);
+
+  const handleAutoFillVerify = () => {
+    const sample = generateVerifySealAutoFill();
+    setAssetId(sample.id);
+    setSignature(sample.sig);
+    setTimestamp(sample.ts);
+    setVendor(sample.vendor);
+    const ok = sample.status === "approved";
+    setIsValid(ok);
+    setSecurityLevel(ok ? "Zero-Trust Encrypted" : "SECURITY BREACH / QUARANTINED");
+  };
 
   const handleVerify = () => {
     setIsVerifying(true);
@@ -65,10 +81,11 @@ function VerifyPassportContent() {
     const auditData = {
       system: "OZIK-SENTINEL",
       gateway: "PUSSIBERAD Tactical Gatekeeper",
-      domain: "ozikra.vercel.app",
+      domain: "oziksentinel.biz.id",
       audit_version: "2.5.0-MIL",
-      asset_id: assetId,
-      hmac_signature: signature,
+      asset_id: assetId || "UNSET",
+      vendor: vendor || "PT Len Industri",
+      hmac_signature: signature || "UNSET",
       issued_at: timestamp,
       security_level: securityLevel,
       integrity_status: isValid ? "SECURE_VERIFIED" : "TAMPERED_ALERT",
@@ -138,29 +155,48 @@ function VerifyPassportContent() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-500">
-                  AUTHENTICATION GATEWAY // OZIKRA.VERCEL.APP
+                  AUTHENTICATION GATEWAY // OZIKSENTINEL.BIZ.ID
                 </div>
                 <h1 className="text-lg sm:text-xl font-bold uppercase tracking-tight text-zinc-950 mt-0.5">
                   Tactical QR Passport Verification
                 </h1>
               </div>
 
-              {/* Dynamic Badge */}
-              <div
-                className={`inline-flex items-center gap-2 border-2 px-3.5 py-1.5 self-start sm:self-center transition-colors ${
-                  isValid
-                    ? "border-emerald-700 bg-emerald-50 text-emerald-900"
-                    : "border-red-600 bg-red-50 text-red-900"
-                }`}
-              >
-                <span
-                  className={`w-2.5 h-2.5 rounded-full ${
-                    isValid ? "bg-emerald-600" : "bg-red-600 animate-ping"
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleAutoFillVerify}
+                  className="border-2 border-zinc-900 bg-zinc-100 hover:bg-zinc-900 hover:text-white px-2.5 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                >
+                  ⚡ Auto-Fill Sample QR Seal
+                </button>
+                {/* Dynamic Badge */}
+                <div
+                  className={`inline-flex items-center gap-2 border-2 px-3.5 py-1.5 self-start sm:self-center transition-colors ${
+                    !assetId
+                      ? "border-zinc-500 bg-zinc-100 text-zinc-700"
+                      : isValid
+                      ? "border-emerald-700 bg-emerald-50 text-emerald-900"
+                      : "border-red-600 bg-red-50 text-red-900"
                   }`}
-                />
-                <span className="font-mono text-xs font-bold uppercase tracking-wider">
-                  {isValid ? "SECURE / VERIFIED" : "WARNING: UNVERIFIED / TAMPERED"}
-                </span>
+                >
+                  <span
+                    className={`w-2.5 h-2.5 rounded-full ${
+                      !assetId
+                        ? "bg-zinc-500"
+                        : isValid
+                        ? "bg-emerald-600"
+                        : "bg-red-600 animate-ping"
+                    }`}
+                  />
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider">
+                    {!assetId
+                      ? "AWAITING QR SCAN / AUTO-FILL"
+                      : isValid
+                      ? "SECURE / VERIFIED"
+                      : "WARNING: UNVERIFIED / TAMPERED"}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -218,7 +254,7 @@ function VerifyPassportContent() {
                   ASSET ID
                 </span>
                 <span className="font-bold text-sm tracking-tight text-zinc-950">
-                  {assetId}
+                  {assetId || "— (Scan QR atau klik ⚡ Auto-Fill Sample QR Seal)"}
                 </span>
               </div>
 
@@ -229,13 +265,14 @@ function VerifyPassportContent() {
                   </span>
                   <button
                     onClick={copySignature}
-                    className="text-[10px] uppercase underline text-zinc-950 hover:text-emerald-700 transition-colors"
+                    disabled={!signature}
+                    className="text-[10px] uppercase underline text-zinc-950 hover:text-emerald-700 transition-colors disabled:opacity-40"
                   >
                     {copied ? "Copied!" : "Copy"}
                   </button>
                 </div>
                 <span className="break-all text-[11px] font-semibold text-zinc-800 leading-relaxed block">
-                  {signature}
+                  {signature || "—"}
                 </span>
               </div>
 
@@ -245,7 +282,7 @@ function VerifyPassportContent() {
                     ISSUED TIMESTAMP
                   </span>
                   <span className="font-semibold text-[11.5px] text-zinc-950">
-                    {timestamp}
+                    {timestamp || "—"}
                   </span>
                 </div>
 
