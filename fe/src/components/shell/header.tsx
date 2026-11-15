@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
+import { OzikLogo } from "@/components/brand/OzikLogo";
 import { openTacticalGuideTour } from "@/components/shell/tactical-guide-tour";
 import { cn, Tag } from "@/components/ui";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -98,6 +100,18 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
         <Icon.Menu size={16} />
       </button>
 
+      {/* Brand Emblem & Masthead on Header (Prominent on Mobile/Tablet) */}
+      <Link
+        href="/dashboard"
+        className="flex items-center gap-2 transition-opacity hover:opacity-90 lg:hidden"
+        title="Ozik-Sentinel Dashboard"
+      >
+        <OzikLogo size={24} showText={false} />
+        <span className="font-display text-sm font-semibold tracking-wider text-paper hidden min-[360px]:inline">
+          OZIK-SENTINEL
+        </span>
+      </Link>
+
       {/* Operational Masthead Status */}
       <div className="hidden items-center gap-2.5 border border-line bg-surface/80 px-3 py-1.5 md:flex">
         <span className="relative flex h-2 w-2">
@@ -114,6 +128,18 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
       </div>
 
       <div className="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
+        <a
+          id="header-github-repo"
+          href="https://github.com/otaruram/ozikra"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Repositori GitHub Ozik-Sentinel"
+          className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center border border-line-strong bg-surface text-muted transition-colors hover:border-brass hover:text-paper"
+          aria-label="Repositori GitHub"
+        >
+          <Icon.GitHub size={15} />
+        </a>
+
         <button
           id="header-open-guide"
           type="button"
@@ -299,6 +325,15 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
               >
                 <Icon.Admin size={14} /> Berkas Profil &amp; RBAC
               </button>
+              <a
+                href="https://github.com/otaruram/ozikra"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setUserOpen(false)}
+                className="flex w-full cursor-pointer items-center gap-2.5 border-t border-line/60 px-4 py-2.5 text-left text-[13px] text-muted transition-colors hover:bg-surface-2 hover:text-paper"
+              >
+                <Icon.GitHub size={14} /> Repositori GitHub Proyek ↗
+              </a>
               <button
                 id="header-sign-out"
                 onClick={async () => {

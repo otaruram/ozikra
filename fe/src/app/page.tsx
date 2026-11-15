@@ -281,7 +281,9 @@ export default function LandingPage() {
       {/* Masthead Navigation */}
       <nav className="relative z-10 border-b border-line-strong bg-surface/80 backdrop-blur-md px-4 py-3.5 sm:px-6 md:px-10">
         <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-3">
-          <OzikLogo size={28} />
+          <Link href="/" className="transition-opacity hover:opacity-90">
+            <OzikLogo size={28} />
+          </Link>
           <div className="flex items-center gap-2 sm:gap-2.5">
             <Link
               href="/verify"
@@ -289,6 +291,18 @@ export default function LandingPage() {
             >
               <span>Cek Segel Paspor QR</span>
             </Link>
+            <a
+              id="landing-github-link"
+              href="https://github.com/otaruram/ozikra"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Repositori GitHub Ozik-Sentinel"
+              className="flex h-8 items-center gap-1.5 border border-line bg-surface-2/60 px-2.5 font-mono text-[11px] text-muted transition-colors hover:border-brass hover:text-paper"
+              title="Repositori GitHub Ozik-Sentinel"
+            >
+              <Icon.GitHub size={13} />
+              <span className="hidden sm:inline">GitHub</span>
+            </a>
             <ThemeToggle id="landing-theme-toggle" />
             {isReady && session ? (
               <Button
@@ -366,6 +380,17 @@ export default function LandingPage() {
               >
                 Registrasi Personel &amp; NRP Baru
               </Button>
+              <a
+                id="hero-github-cta"
+                href="https://github.com/otaruram/ozikra"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-11 items-center justify-center gap-2 border border-line-strong bg-surface px-4 font-mono text-xs font-semibold text-paper transition-colors hover:border-brass hover:bg-surface-2 w-full sm:w-auto"
+              >
+                <Icon.GitHub size={15} />
+                <span>GitHub Repository</span>
+                <span className="text-subtle">↗</span>
+              </a>
             </div>
 
             {/* Cryptographic Provenance Factsheet Strip */}
@@ -645,9 +670,21 @@ export default function LandingPage() {
               Ozik-Sentinel · Pusat Siber TNI Angkatan Darat (Pussiberad)
             </span>
           </div>
-          <span className="font-mono text-[11px] text-subtle">
-            SHA-256 Ledger · Paspor QR HMAC · Air-Gapped Ready
-          </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <a
+              href="https://github.com/otaruram/ozikra"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 font-mono text-[11px] text-muted transition-colors hover:border-brass hover:text-paper"
+            >
+              <Icon.GitHub size={13} />
+              <span>github.com/otaruram/ozikra</span>
+            </a>
+            <span className="text-subtle">·</span>
+            <span className="font-mono text-[11px] text-subtle">
+              SHA-256 Ledger · Paspor QR HMAC · Air-Gapped Ready
+            </span>
+          </div>
         </div>
       </footer>
 
