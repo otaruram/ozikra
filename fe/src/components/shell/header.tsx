@@ -7,7 +7,6 @@ import { Icon } from "@/components/icons";
 import { OzikLogo } from "@/components/brand/OzikLogo";
 import { openTacticalGuideTour } from "@/components/shell/tactical-guide-tour";
 import { cn, Tag } from "@/components/ui";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { canAccess, type RouteKey } from "@/lib/rbac";
 import { useSession } from "@/lib/session-context";
 import {
@@ -100,15 +99,18 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
         <Icon.Menu size={16} />
       </button>
 
-      {/* Brand Emblem & Masthead on Header (Prominent on Mobile/Tablet) */}
+      {/* Brand Emblem & Masthead on Header (Fluid Multi-Device Responsive) */}
       <Link
         href="/dashboard"
-        className="flex items-center gap-2 transition-opacity hover:opacity-90 lg:hidden"
+        className="flex shrink-0 items-center gap-1.5 transition-opacity hover:opacity-90 lg:hidden"
         title="Ozik-Sentinel Dashboard"
       >
-        <OzikLogo size={24} showText={false} />
-        <span className="font-display text-sm font-semibold tracking-wider text-paper hidden min-[360px]:inline">
+        <OzikLogo size={22} showText={false} />
+        <span className="font-display text-xs font-semibold tracking-wider text-paper hidden min-[390px]:inline">
           OZIK-SENTINEL
+        </span>
+        <span className="font-display text-xs font-semibold tracking-wider text-paper hidden min-[330px]:inline min-[390px]:hidden">
+          OZIK
         </span>
       </Link>
 
@@ -128,18 +130,7 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
       </div>
 
       <div className="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
-        <a
-          id="header-github-repo"
-          href="https://github.com/otaruram/ozikra"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Repositori GitHub Ozik-Sentinel"
-          className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center border border-line-strong bg-surface text-muted transition-colors hover:border-brass hover:text-paper"
-          aria-label="Repositori GitHub"
-        >
-          <Icon.GitHub size={15} />
-        </a>
-
+        {/* Interactive Guide Trigger (Compact '?' on mobile, labeled on tablet/desktop) */}
         <button
           id="header-open-guide"
           type="button"
@@ -155,9 +146,7 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
           <span className="hidden sm:inline">Panduan</span>
         </button>
 
-        <ThemeToggle id="header-theme-toggle" />
-
-        {/* Switch Role Simulator (static on mobile so dropdown spans full header width with safe inset) */}
+        {/* Switch Role Simulator (Static on mobile so dropdown spans full header width with safe inset) */}
         <div ref={roleRef} className="sm:relative">
           <button
             id="header-role-simulator"
@@ -166,19 +155,19 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
               setUserOpen(false);
               setRoleOpen((v) => !v);
             }}
-            className="flex h-9 max-w-[155px] cursor-pointer items-center gap-1.5 border border-line-strong bg-surface/80 px-2 transition-colors hover:border-brass disabled:opacity-60 sm:max-w-none sm:gap-2 sm:px-3"
+            className="flex h-9 max-w-[130px] cursor-pointer items-center gap-1.5 border border-line-strong bg-surface/80 px-2 transition-colors hover:border-brass disabled:opacity-60 min-[380px]:max-w-[160px] sm:max-w-none sm:gap-2 sm:px-3"
           >
             {isSwitching ? (
               <>
                 <Icon.Refresh size={12} className="shrink-0 animate-spin text-accent" />
                 <span className="truncate font-mono text-[10.5px] text-paper">
-                  Memutar JWT…
+                  Memutar…
                 </span>
               </>
             ) : (
               <>
                 <span className="hidden text-xs text-muted sm:inline">Peran:</span>
-                <Tag tone="brass" className="max-w-[116px] truncate sm:max-w-none">
+                <Tag tone="brass" className="max-w-[86px] truncate min-[380px]:max-w-[115px] sm:max-w-none">
                   {ROLE_LABEL[role]}
                 </Tag>
                 <Icon.Chevron
@@ -301,10 +290,6 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
                 <p className="mt-1.5 font-mono text-[10px] text-brass">
                   ★ {session.provider.replace("_", " ")} · NRP {session.user.nrp || "—"}
                 </p>
-              </div>
-              <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
-                <span className="text-xs text-muted">Tampilan Material</span>
-                <ThemeToggle showLabel />
               </div>
               <button
                 type="button"

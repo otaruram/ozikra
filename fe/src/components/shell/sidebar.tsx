@@ -209,6 +209,22 @@ export function Sidebar({
             className="h-7 border-0 bg-transparent px-1.5 text-xs hover:bg-transparent"
           />
         </div>
+
+        <a
+          id="sidebar-github-link"
+          href="https://github.com/otaruram/ozikra"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-between border border-line bg-surface px-3 py-2 text-[11.5px] text-muted transition-colors hover:border-brass hover:text-paper"
+          title="Repositori GitHub Ozik-Sentinel"
+        >
+          <div className="flex items-center gap-2">
+            <Icon.GitHub size={14} className="text-paper" />
+            <span className="font-mono text-[11px]">GitHub Repository</span>
+          </div>
+          <span className="font-mono text-[10.5px] text-subtle">↗</span>
+        </a>
+
         <div className="flex flex-col gap-1.5 border border-line bg-ink px-3 py-2.5">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-medium text-muted">
