@@ -21,7 +21,7 @@ import {
 } from "@/components/ui";
 import { useAction } from "@/hooks/use-async";
 import { onExportQRSeal, onUploadManifest, recordAuditAction } from "@/lib/api";
-import { FRONTEND_BASE_URL, generateGatekeeperAutoFill } from "@/lib/autofill-generator";
+import { FRONTEND_BASE_URL, generateGatekeeperAutoFill, recordLastPhaseAsset } from "@/lib/autofill-generator";
 import { useSession } from "@/lib/session-context";
 import { ASSET_TYPE_LABEL, type AssetType, type ManifestSubmission } from "@/types/sentinel";
 
@@ -50,16 +50,16 @@ export default function GatekeeperPage() {
   // Construct absolute scannable HTTPS verification URL for camera lenses (iOS / Android / Lens)
   const verifyUrl = activePassport
     ? `${FRONTEND_BASE_URL}/verify?id=${encodeURIComponent(
-        activePassport.assetId
-      )}&sig=${encodeURIComponent(
-        activePassport.signature
-      )}&ts=${encodeURIComponent(
-        activePassport.issuedAt
-      )}&vendor=${encodeURIComponent(
-        form.vendor || "PT Len Industri"
-      )}&status=${encodeURIComponent(
-        (result?.verdict || "APPROVED").toLowerCase()
-      )}`
+      activePassport.assetId
+    )}&sig=${encodeURIComponent(
+      activePassport.signature
+    )}&ts=${encodeURIComponent(
+      activePassport.issuedAt
+    )}&vendor=${encodeURIComponent(
+      form.vendor || "PT Len Industri"
+    )}&status=${encodeURIComponent(
+      (result?.verdict || "APPROVED").toLowerCase()
+    )}`
     : "";
 
   useEffect(() => {
@@ -86,7 +86,10 @@ export default function GatekeeperPage() {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    await verify.run(form);
+    const res = await verify.run(form);
+    if (res?.assetId) {
+      recordLastPhaseAsset(res.assetId, session?.user?.email);
+    }
   };
 
   const handleAutoFillGatekeeper = async () => {
@@ -104,7 +107,10 @@ export default function GatekeeperPage() {
 
     setForm(submission);
     // Execute live backend AI pipeline & write real user-scoped row into Supabase Postgres
-    await verify.run(submission);
+    const res = await verify.run(submission);
+    if (res?.assetId) {
+      recordLastPhaseAsset(res.assetId, session?.user?.email);
+    }
   };
 
   return (

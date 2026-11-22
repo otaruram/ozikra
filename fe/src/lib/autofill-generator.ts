@@ -118,6 +118,103 @@ export function getNextUserPresetIndex(scope: string, poolSize: number, userIden
   return (baseSeed + clickCount) % poolSize;
 }
 
+const FORENSICS_VISITED_PREFIX = "ozikra.forensics_visited_v1_";
+const SIEM_VISITED_PREFIX = "ozikra.siem_visited_v1_";
+const E2E_LATEST_ASSET_PREFIX = "ozikra.e2e_latest_asset_v1_";
+
+function getUserScopeKey(userIdentifier?: string): string {
+  if (userIdentifier && userIdentifier.trim()) {
+    return userIdentifier.trim().toLowerCase();
+  }
+  return getOrCreateBrowserOfficerIdentity().email.toLowerCase();
+}
+
+export function recordLastPhaseAsset(assetId: string, userIdentifier?: string): void {
+  if (typeof window === "undefined" || !assetId) return;
+  try {
+    const key = `${E2E_LATEST_ASSET_PREFIX}${getUserScopeKey(userIdentifier)}`;
+    window.localStorage.setItem(key, assetId);
+  } catch {
+    // ignore storage errors
+  }
+}
+
+export function markForensicsAssetVisited(assetId: string, userIdentifier?: string): void {
+  if (typeof window === "undefined" || !assetId) return;
+  try {
+    const key = `${FORENSICS_VISITED_PREFIX}${getUserScopeKey(userIdentifier)}`;
+    const raw = window.localStorage.getItem(key);
+    const list: string[] = raw ? JSON.parse(raw) : [];
+    if (!list.includes(assetId)) {
+      list.push(assetId);
+      window.localStorage.setItem(key, JSON.stringify(list));
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
+
+/**
+ * Picks an asset for Forensics Auto-Fill that has NEVER been auto-filled in Forensics before
+ * and is currently not isolated. Prioritizes the latest asset from Phase I / Phase II if unvisited.
+ */
+export function pickNextUnvisitedForensicAsset(existingAssets: Asset[], userIdentifier?: string): string {
+  if (!existingAssets || existingAssets.length === 0) return "";
+
+  const userKey = getUserScopeKey(userIdentifier);
+  const storageKey = `${FORENSICS_VISITED_PREFIX}${userKey}`;
+  const latestKey = `${E2E_LATEST_ASSET_PREFIX}${userKey}`;
+
+  let visitedList: string[] = [];
+  let latestE2EAsset = "";
+
+  if (typeof window !== "undefined") {
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      visitedList = raw ? JSON.parse(raw) : [];
+      latestE2EAsset = window.localStorage.getItem(latestKey) || "";
+    } catch {
+      visitedList = [];
+    }
+  }
+
+  const visitedSet = new Set(visitedList);
+  const isHealthy = (a: Asset) => a.integrityState !== "COMPROMISED" && a.status !== "ISOLATED";
+
+  // 1. End-to-End priority: if Phase I/II just touched an asset that hasn't been investigated in Phase III yet
+  if (latestE2EAsset && !visitedSet.has(latestE2EAsset)) {
+    const found = existingAssets.find((a) => a.id === latestE2EAsset && isHealthy(a));
+    if (found) {
+      markForensicsAssetVisited(found.id, userIdentifier);
+      return found.id;
+    }
+  }
+
+  // 2. Filter unvisited & un-isolated assets
+  let candidates = existingAssets.filter((a) => isHealthy(a) && !visitedSet.has(a.id));
+
+  // 3. Fallback: if all un-isolated assets were already visited once, reset visited history for un-isolated assets
+  if (candidates.length === 0) {
+    const allHealthy = existingAssets.filter(isHealthy);
+    if (allHealthy.length > 0) {
+      candidates = allHealthy;
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem(storageKey, JSON.stringify([]));
+        } catch {}
+      }
+    } else {
+      // Every asset is isolated; pick any unvisited or first
+      const unvisitedAny = existingAssets.filter((a) => !visitedSet.has(a.id));
+      candidates = unvisitedAny.length > 0 ? unvisitedAny : existingAssets;
+    }
+  }
+
+  const chosen = candidates[0];
+  markForensicsAssetVisited(chosen.id, userIdentifier);
+  return chosen.id;
+}
+
 export interface GatekeeperAutoFillBundle {
   assetName: string;
   serialNumber: string;
@@ -426,15 +523,54 @@ export interface SiemAutoFillBundle {
 
 export function generateSiemAutoFill(existingAssets: Asset[], userIdentifier?: string): SiemAutoFillBundle {
   const identity = getOrCreateBrowserOfficerIdentity();
-  const idx = getNextUserPresetIndex("siem_checkin", 6, userIdentifier);
+  const poolSize = Math.max(6, existingAssets.length);
+  const idx = getNextUserPresetIndex("siem_checkin", poolSize, userIdentifier);
   const techProfile = RANKS_AND_NAMES[(idx + identity.seedHash) % RANKS_AND_NAMES.length];
   const techNrp = `31${((identity.seedHash + idx * 137) % 899999 + 100000).toString()}`;
   const technicianId = `${techProfile.name} (NRP ${techNrp} — ${techProfile.unit})`;
 
-  const chosenAsset =
-    existingAssets.length > 0
-      ? existingAssets[idx % existingAssets.length]
-      : null;
+  let chosenAsset: Asset | null = null;
+  if (existingAssets.length > 0) {
+    const userKey = getUserScopeKey(userIdentifier);
+    const siemStorageKey = `${SIEM_VISITED_PREFIX}${userKey}`;
+    const latestKey = `${E2E_LATEST_ASSET_PREFIX}${userKey}`;
+    let visitedSiem: string[] = [];
+    let latestGatekeeperId = "";
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem(siemStorageKey);
+        visitedSiem = raw ? JSON.parse(raw) : [];
+        latestGatekeeperId = window.localStorage.getItem(latestKey) || "";
+      } catch {}
+    }
+    const visitedSet = new Set(visitedSiem);
+    const healthyAssets = existingAssets.filter(
+      (a) => a.integrityState !== "COMPROMISED" && a.status !== "ISOLATED"
+    );
+    const pool = healthyAssets.length > 0 ? healthyAssets : existingAssets;
+
+    if (latestGatekeeperId && !visitedSet.has(latestGatekeeperId)) {
+      chosenAsset = pool.find((a) => a.id === latestGatekeeperId) || null;
+    }
+    if (!chosenAsset) {
+      const unvisited = pool.filter((a) => !visitedSet.has(a.id));
+      if (unvisited.length > 0) {
+        chosenAsset = unvisited[0];
+      } else {
+        chosenAsset = pool[idx % pool.length];
+        visitedSiem = [];
+      }
+    }
+    if (chosenAsset && typeof window !== "undefined") {
+      try {
+        if (!visitedSiem.includes(chosenAsset.id)) {
+          visitedSiem.push(chosenAsset.id);
+        }
+        window.localStorage.setItem(siemStorageKey, JSON.stringify(visitedSiem));
+        recordLastPhaseAsset(chosenAsset.id, userIdentifier);
+      } catch {}
+    }
+  }
 
   const targetAssetId =
     chosenAsset?.id ??

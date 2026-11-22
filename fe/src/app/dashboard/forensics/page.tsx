@@ -22,11 +22,15 @@ import {
   fetchAssets,
   onExportForensicReport,
   onIsolateAssetNode,
+  onRestoreAssetNode,
   onRunForensicAgent,
   onTriggerTelemetryTestEvent,
   recordAuditAction,
 } from "@/lib/api";
-import { getNextUserPresetIndex } from "@/lib/autofill-generator";
+import {
+  markForensicsAssetVisited,
+  pickNextUnvisitedForensicAsset,
+} from "@/lib/autofill-generator";
 import { canKillSwitch as checkKillSwitch } from "@/lib/rbac";
 import { sanitizeMilitaryText } from "@/lib/sanitize";
 import { useSession } from "@/lib/session-context";
@@ -82,8 +86,13 @@ export default function ForensicsPage() {
   const [showReportModal, setShowReportModal] = useState(false);
   const investigate = useAction(onRunForensicAgent);
   const isolate = useAction(onIsolateAssetNode);
+  const restore = useAction(onRestoreAssetNode);
+  const [manualIsolated, setManualIsolated] = useState<boolean | null>(null);
   const report = investigate.result;
-  const isolated = report?.isolated || isolate.result?.isolated;
+  const isolated =
+    manualIsolated !== null
+      ? manualIsolated
+      : Boolean(report?.isolated || isolate.result?.isolated);
   const canKillSwitch = role ? checkKillSwitch(role) : false;
 
   const [isExporting, setIsExporting] = useState(false);
@@ -140,8 +149,7 @@ export default function ForensicsPage() {
     let targetId = "";
 
     if (list.length > 0) {
-      const idx = getNextUserPresetIndex("forensics", list.length, session?.user?.email);
-      targetId = list[idx].id;
+      targetId = pickNextUnvisitedForensicAsset(list, session?.user?.email);
     } else {
       // User has an empty workspace: auto-inject a unique compromised asset + anomaly for this user first
       try {
@@ -151,11 +159,36 @@ export default function ForensicsPage() {
       } catch {
         targetId = `AST-OT-${Math.floor(100 + Math.random() * 899)}`;
       }
+      markForensicsAssetVisited(targetId, session?.user?.email);
     }
 
+    setManualIsolated(null);
+    isolate.setNotice(null);
+    restore.setNotice(null);
     setAssetId(targetId);
     // Execute real backend AI investigation & write RCA into Supabase
     await investigate.run(targetId);
+  };
+
+  const handleEngageKillSwitch = async () => {
+    if (!assetId) return;
+    markForensicsAssetVisited(assetId, session?.user?.email);
+    restore.setNotice(null);
+    const res = await isolate.run(assetId);
+    if (res?.isolated) {
+      setManualIsolated(true);
+      await assets.refetch();
+    }
+  };
+
+  const handleResetAlarmAndRestore = async () => {
+    const target = assetId || report?.assetId || "AST-RADAR-01";
+    isolate.setNotice(null);
+    const res = await restore.run(target);
+    if (res) {
+      setManualIsolated(false);
+      await assets.refetch();
+    }
   };
 
   return (
@@ -177,7 +210,14 @@ export default function ForensicsPage() {
               ⚡ Auto-Fill Target Insiden &amp; Jalankan Forensik
             </Button>
             <div className="w-64">
-              <Select id="forensics-asset-select" value={assetId} onChange={(e) => setAssetId(e.target.value)}>
+              <Select
+                id="forensics-asset-select"
+                value={assetId}
+                onChange={(e) => {
+                  setAssetId(e.target.value);
+                  setManualIsolated(null);
+                }}
+              >
                 <option value="">{assets.isLoading ? "Loading assets…" : "Select target asset"}</option>
                 {assets.data?.map((a) => (
                   <option key={a.id} value={a.id}>
@@ -192,7 +232,11 @@ export default function ForensicsPage() {
               disabled={!assetId}
               loading={investigate.isPending}
               icon={<Icon.Forensic size={15} />}
-              onClick={() => investigate.run(assetId)}
+              onClick={() => {
+                setManualIsolated(null);
+                markForensicsAssetVisited(assetId, session?.user?.email);
+                investigate.run(assetId);
+              }}
             >
               Run AI Forensic Investigation
             </Button>
@@ -309,11 +353,22 @@ export default function ForensicsPage() {
                   disabled={!assetId || !!isolated}
                   loading={isolate.isPending}
                   icon={<Icon.Power size={15} />}
-                  onClick={() => isolate.run(assetId)}
+                  onClick={handleEngageKillSwitch}
                 >
                   Isolate Asset Node (Kill-Switch)
                 </Button>
+                <Button
+                  id="forensics-reset-alarm"
+                  variant="outline"
+                  loading={restore.isPending}
+                  icon={<Icon.Refresh size={15} />}
+                  onClick={handleResetAlarmAndRestore}
+                  className="border-accent/60 bg-accent/10 text-accent hover:bg-accent hover:text-accent-ink"
+                >
+                  Matikan Alarm &amp; Pulihkan Node (Reset)
+                </Button>
                 <Notice notice={isolate.notice} onClose={() => isolate.setNotice(null)} />
+                <Notice notice={restore.notice} onClose={() => restore.setNotice(null)} />
               </>
             ) : (
               <div className="border border-crimson/55 bg-crimson/10 p-3.5 flex flex-col gap-1.5">

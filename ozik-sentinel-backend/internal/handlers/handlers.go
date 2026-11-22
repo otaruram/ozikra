@@ -150,6 +150,7 @@ func (h *Handlers) RegisterRoutes(r *gin.Engine, mw *middleware.Middleware) {
 		v1.GET("/forensics/ledger/verify", h.HandleVerifyLedger)
 		v1.POST("/forensics/ledger/audit", h.HandleLogAuditAction)
 		v1.POST("/forensics/isolate/:asset_id", mw.TacticalAuth(), middleware.RequireRole(models.RoleSuperAdmin, models.RoleCommander), h.HandleForensicIsolate)
+		v1.POST("/forensics/restore/:asset_id", mw.TacticalAuth(), middleware.RequireRole(models.RoleSuperAdmin, models.RoleCommander), h.HandleForensicRestore)
 		v1.POST("/forensics/investigate", mw.TacticalAuth(), middleware.RequireRole(models.RoleSuperAdmin, models.RoleCommander, models.RoleForensicAuditor), h.HandleForensicInvestigate)
 		v1.POST("/forensics/investigate/:asset_id", mw.TacticalAuth(), middleware.RequireRole(models.RoleSuperAdmin, models.RoleCommander, models.RoleForensicAuditor), h.HandleForensicInvestigate)
 		v1.GET("/forensics/report/:asset_id/pdf", mw.TacticalAuth(), middleware.RequireRole(models.RoleSuperAdmin, models.RoleCommander, models.RoleForensicAuditor), h.HandleExportForensicReport)
@@ -1009,8 +1010,8 @@ func (h *Handlers) HandleForensicIsolate(c *gin.Context) {
 		actor = fmt.Sprintf("%v", off)
 	}
 	cmd := h.repo.QueueIoTCommand(assetID, "ISOLATE_NODE", actor)
-	if assetID != "AST-RADAR-01" {
-		// Also mirror to default hardware dongle ID so physical ESP32 triggers without reflashing ASSET_ID
+	if assetID != "AST-RADAR-01" && strings.EqualFold(ownerID, "okitr52@gmail.com") {
+		// Mirror to physical ESP32 dongle ID exclusively for okitr52@gmail.com account
 		_ = h.repo.QueueIoTCommand("AST-RADAR-01", "ISOLATE_NODE", actor)
 	}
 
@@ -1030,6 +1031,54 @@ func (h *Handlers) HandleForensicIsolate(c *gin.Context) {
 		"assetId":   assetID,
 		"commandId": cmd.ID,
 		"message":   fmt.Sprintf("Kill-Switch engaged. Node %s physically isolated via hardware relay cut.", assetID),
+	})
+}
+
+func (h *Handlers) HandleForensicRestore(c *gin.Context) {
+	ownerID := h.getRequestOwnerID(c)
+	reqRole := h.getRequestRole(c)
+	assetID := c.Param("asset_id")
+	if assetID == "" {
+		var body struct {
+			AssetID string `json:"assetId"`
+		}
+		_ = c.ShouldBindJSON(&body)
+		assetID = body.AssetID
+	}
+	if assetID == "" {
+		assetID = "AST-RADAR-01"
+	}
+
+	// 1. Restore asset status in Supabase back to SECURE
+	_ = h.repo.UpdateAssetStatus(assetID, models.StateSecure, "SECURE")
+
+	// 2. Queue RESET_ALARM command for physical ESP32 dongle (only for okitr52@gmail.com)
+	actor := "COMMANDER_CONSOLE"
+	if off, exists := c.Get("officer_id"); exists {
+		actor = fmt.Sprintf("%v", off)
+	}
+	cmd := h.repo.QueueIoTCommand(assetID, "RESET_ALARM", actor)
+	if assetID != "AST-RADAR-01" && strings.EqualFold(ownerID, "okitr52@gmail.com") {
+		_ = h.repo.QueueIoTCommand("AST-RADAR-01", "RESET_ALARM", actor)
+	}
+
+	// 3. Log into Audit Ledger
+	_, _ = h.repo.AppendLedger(actor, "ALARM_RESET_NODE_RESTORATION", assetID, fmt.Sprintf("CMD:%s:ALARM_OFF_RELAY_RESTORE", cmd.ID), ownerID, reqRole)
+
+	// 4. Broadcast SSE
+	h.siem.BroadcastSSE("NODE_RESTORED", gin.H{
+		"asset_id":   assetID,
+		"command_id": cmd.ID,
+		"isolated":   false,
+		"timestamp":  time.Now().Format(time.RFC3339),
+	})
+
+	c.JSON(http.StatusOK, gin.H{
+		"isolated":   false,
+		"alarmMuted": true,
+		"assetId":    assetID,
+		"commandId":  cmd.ID,
+		"message":    fmt.Sprintf("Alarm dimatikan & relai fisik node %s berhasil dipulihkan ke status OPERATIONAL.", assetID),
 	})
 }
 

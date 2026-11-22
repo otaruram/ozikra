@@ -227,10 +227,19 @@ export const onRunForensicAgent = (assetId: string) =>
   });
 
 export const onIsolateAssetNode = (assetId: string) =>
-  request<{ isolated: boolean }>(`/api/v1/forensics/isolate/${encodeURIComponent(assetId)}`, {
+  request<{ isolated: boolean; message?: string }>(`/api/v1/forensics/isolate/${encodeURIComponent(assetId)}`, {
     method: "POST",
     body: JSON.stringify({ assetId }),
   });
+
+export const onRestoreAssetNode = (assetId: string) =>
+  request<{ isolated: boolean; alarmMuted?: boolean; message?: string }>(
+    `/api/v1/forensics/restore/${encodeURIComponent(assetId || "AST-RADAR-01")}`,
+    {
+      method: "POST",
+      body: JSON.stringify({ assetId: assetId || "AST-RADAR-01" }),
+    }
+  );
 
 export const onExportForensicReport = (investigationId: string) =>
   request<{ url: string }>(`/api/v1/forensics/report/${investigationId}/pdf`);
