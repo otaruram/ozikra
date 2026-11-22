@@ -87,8 +87,8 @@ export default function GatekeeperPage() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     const res = await verify.run(form);
-    if (res?.assetId) {
-      recordLastPhaseAsset(res.assetId, session?.user?.email);
+    if (res?.passport?.assetId) {
+      recordLastPhaseAsset(res.passport.assetId, session?.user?.email);
     }
   };
 
@@ -108,8 +108,8 @@ export default function GatekeeperPage() {
     setForm(submission);
     // Execute live backend AI pipeline & write real user-scoped row into Supabase Postgres
     const res = await verify.run(submission);
-    if (res?.assetId) {
-      recordLastPhaseAsset(res.assetId, session?.user?.email);
+    if (res?.passport?.assetId) {
+      recordLastPhaseAsset(res.passport.assetId, session?.user?.email);
     }
   };
 
