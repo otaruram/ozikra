@@ -179,7 +179,8 @@ export function pickNextUnvisitedForensicAsset(existingAssets: Asset[], userIden
   }
 
   const visitedSet = new Set(visitedList);
-  const isHealthy = (a: Asset) => a.integrityState !== "COMPROMISED" && a.status !== "ISOLATED";
+  const isHealthy = (a: Asset) =>
+    a.integrityState !== "COMPROMISED" && (a as { status?: string }).status !== "ISOLATED";
 
   // 1. End-to-End priority: if Phase I/II just touched an asset that hasn't been investigated in Phase III yet
   if (latestE2EAsset && !visitedSet.has(latestE2EAsset)) {
@@ -545,7 +546,7 @@ export function generateSiemAutoFill(existingAssets: Asset[], userIdentifier?: s
     }
     const visitedSet = new Set(visitedSiem);
     const healthyAssets = existingAssets.filter(
-      (a) => a.integrityState !== "COMPROMISED" && a.status !== "ISOLATED"
+      (a) => a.integrityState !== "COMPROMISED" && (a as { status?: string }).status !== "ISOLATED"
     );
     const pool = healthyAssets.length > 0 ? healthyAssets : existingAssets;
 
