@@ -2,6 +2,10 @@ package main
 
 import (
 	"log"
+	"net/http"
+	"os"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"ozik-sentinel-backend/internal/config"
@@ -10,6 +14,29 @@ import (
 	"ozik-sentinel-backend/internal/repository"
 	"ozik-sentinel-backend/internal/services"
 )
+
+func startRenderKeepAlive() {
+	baseURL := strings.TrimRight(strings.TrimSpace(os.Getenv("RENDER_EXTERNAL_URL")), "/")
+	if baseURL == "" {
+		baseURL = "https://ozik-sentinel.onrender.com"
+	}
+	target := baseURL + "/api/v1/health"
+	client := &http.Client{Timeout: 10 * time.Second}
+
+	go func() {
+		// Initial delay to allow server bind
+		time.Sleep(30 * time.Second)
+		ticker := time.NewTicker(4 * time.Minute)
+		defer ticker.Stop()
+		for {
+			resp, err := client.Get(target)
+			if err == nil && resp != nil {
+				_ = resp.Body.Close()
+			}
+			<-ticker.C
+		}
+	}()
+}
 
 func main() {
 	cfg := config.Load()
@@ -41,6 +68,7 @@ func main() {
 	r := gin.Default()
 
 	h.RegisterRoutes(r, mw)
+	startRenderKeepAlive()
 
 	log.Printf("[+] Server listening on port %s", cfg.Port)
 	log.Printf("[+] Health Check Endpoint: http://localhost:%s/healthz", cfg.Port)
