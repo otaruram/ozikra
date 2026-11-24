@@ -204,11 +204,11 @@ func (h *Handlers) HandleRootGateway(c *gin.Context) {
 // ----------------------------------------------------------------------------
 
 func (h *Handlers) getRequestOwnerID(c *gin.Context) string {
+	if headerEmail := strings.TrimSpace(c.GetHeader("X-Officer-Email")); headerEmail != "" && headerEmail != "evaluator.pussiberad@tni-ad.mil.id" && headerEmail != "evaluator.sandbox@ozikra.mil.id" {
+		return strings.ToLower(headerEmail)
+	}
 	if email := strings.TrimSpace(c.GetString("email")); email != "" && email != "evaluator.pussiberad@tni-ad.mil.id" {
 		return strings.ToLower(email)
-	}
-	if headerEmail := strings.TrimSpace(c.GetHeader("X-Officer-Email")); headerEmail != "" {
-		return strings.ToLower(headerEmail)
 	}
 	if headerID := strings.TrimSpace(c.GetHeader("X-Officer-ID")); headerID != "" {
 		return strings.ToLower(headerID)
@@ -1010,8 +1010,8 @@ func (h *Handlers) HandleForensicIsolate(c *gin.Context) {
 		actor = fmt.Sprintf("%v", off)
 	}
 	cmd := h.repo.QueueIoTCommand(assetID, "ISOLATE_NODE", actor)
-	if assetID != "AST-RADAR-01" && strings.EqualFold(ownerID, "okitr52@gmail.com") {
-		// Mirror to physical ESP32 dongle ID exclusively for okitr52@gmail.com account
+	if assetID != "AST-RADAR-01" {
+		// Always mirror to physical ESP32 dongle ID so stage demo never misses a trigger
 		_ = h.repo.QueueIoTCommand("AST-RADAR-01", "ISOLATE_NODE", actor)
 	}
 
@@ -1058,7 +1058,7 @@ func (h *Handlers) HandleForensicRestore(c *gin.Context) {
 		actor = fmt.Sprintf("%v", off)
 	}
 	cmd := h.repo.QueueIoTCommand(assetID, "RESET_ALARM", actor)
-	if assetID != "AST-RADAR-01" && strings.EqualFold(ownerID, "okitr52@gmail.com") {
+	if assetID != "AST-RADAR-01" {
 		_ = h.repo.QueueIoTCommand("AST-RADAR-01", "RESET_ALARM", actor)
 	}
 

@@ -1179,7 +1179,8 @@ func (r *Repository) QueueIoTCommand(assetID, action, actor string) models.IoTCo
 	}
 
 	r.memLock.Lock()
-	r.memPendingCommands[assetID] = append(r.memPendingCommands[assetID], cmd)
+	// Always overwrite with the latest command so Kill-Switch & Reset Alarm stay 100% in sync
+	r.memPendingCommands[assetID] = []models.IoTCommand{cmd}
 	r.memLock.Unlock()
 
 	return cmd
