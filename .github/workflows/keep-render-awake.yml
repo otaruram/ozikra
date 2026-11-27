@@ -1,8 +1,6 @@
-name: Keep Render Backend Awake
+name: Keep Render Backend Awake (Manual On-Demand)
 
 on:
-  schedule:
-    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -16,3 +14,4 @@ jobs:
             echo ""
             if [ "$i" -lt 3 ]; then sleep 90; fi
           done
+

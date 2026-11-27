@@ -16,6 +16,9 @@ import (
 )
 
 func startRenderKeepAlive() {
+	if !strings.EqualFold(strings.TrimSpace(os.Getenv("ENABLE_KEEP_ALIVE")), "true") {
+		return
+	}
 	baseURL := strings.TrimRight(strings.TrimSpace(os.Getenv("RENDER_EXTERNAL_URL")), "/")
 	if baseURL == "" {
 		baseURL = "https://ozik-sentinel.onrender.com"
